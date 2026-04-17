@@ -239,3 +239,92 @@ export const getExerciseHistory = async (
     };
   });
 };
+
+export const getWeeklyData = async (
+  userId: string,
+  weekStartDate: string
+): Promise<{
+  weight: { date: string; weight: number }[];
+  measurements: { date: string; waist: number; hip: number; thigh: number; upperArm: number }[];
+  food: FoodRecord[];
+  exercise: ExerciseRecord[];
+}> => {
+  const startDate = new Date(weekStartDate);
+  const weightData: { date: string; weight: number }[] = [];
+  const measurementData: { date: string; waist: number; hip: number; thigh: number; upperArm: number }[] = [];
+  const foodData: FoodRecord[] = [];
+  const exerciseData: ExerciseRecord[] = [];
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + i);
+    const dateStr = date.toISOString().split("T")[0];
+
+    const weightRef = collection(db, "records", userId, "daily", dateStr, "weight");
+    const weightQ = query(weightRef, orderBy("createdAt", "asc"));
+    const weightSnap = await getDocs(weightQ);
+    if (!weightSnap.empty) {
+      const dayRecords = weightSnap.docs.map((doc) => doc.data());
+      const morningRecord = dayRecords.find((r) => r.isMorning);
+      if (morningRecord) {
+        weightData.push({ date: dateStr, weight: morningRecord.weight as number });
+      } else {
+        weightData.push({ date: dateStr, weight: dayRecords[dayRecords.length - 1].weight as number });
+      }
+    }
+
+    const measurementRef = collection(db, "records", userId, "daily", dateStr, "measurement");
+    const measurementQ = query(measurementRef, orderBy("createdAt", "desc"));
+    const measurementSnap = await getDocs(measurementQ);
+    if (!measurementSnap.empty) {
+      const data = measurementSnap.docs[0].data();
+      measurementData.push({
+        date: dateStr,
+        waist: data.waist as number,
+        hip: data.hip as number,
+        thigh: data.thigh as number,
+        upperArm: data.upperArm as number,
+      });
+    }
+
+    const foodRef = collection(db, "records", userId, "daily", dateStr, "food");
+    const foodQ = query(foodRef, orderBy("createdAt", "desc"));
+    const foodSnap = await getDocs(foodQ);
+    foodSnap.docs.forEach((doc) => {
+      const data = doc.data();
+      foodData.push({
+        id: doc.id,
+        mealType: data.mealType as string,
+        foodDescription: data.foodDescription as string,
+        portion: data.portion as number,
+        hungerLevel: data.hungerLevel as number,
+        triggerReason: data.triggerReason as string,
+        emotion: data.emotion as string,
+        feeling: data.feeling as string,
+        createdAt: data.createdAt?.toDate() || new Date(),
+      });
+    });
+
+    const exerciseRef = collection(db, "records", userId, "daily", dateStr, "exercise");
+    const exerciseQ = query(exerciseRef, orderBy("createdAt", "desc"));
+    const exerciseSnap = await getDocs(exerciseQ);
+    exerciseSnap.docs.forEach((doc) => {
+      const data = doc.data();
+      exerciseData.push({
+        id: doc.id,
+        exerciseType: data.exerciseType as string,
+        duration: data.duration as number,
+        calories: data.calories as number,
+        intensity: data.intensity as "light" | "medium" | "high",
+        createdAt: data.createdAt?.toDate() || new Date(),
+      });
+    });
+  }
+
+  return {
+    weight: weightData,
+    measurements: measurementData,
+    food: foodData,
+    exercise: exerciseData,
+  };
+};

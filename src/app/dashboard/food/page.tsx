@@ -12,9 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, getDailyRecords, getFoodHistory } from "@/lib/firestore";
-import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb } from "lucide-react";
+import { addDailyRecord, getDailyRecords, getFoodHistory, getWeeklyData } from "@/lib/firestore";
+import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Scale, Ruler, Calendar, Target, Zap } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "morningSnack" | "afternoonSnack" | "eveningSnack";
 
@@ -61,6 +62,30 @@ interface TodayRecord {
   createdAt: Date;
 }
 
+interface WeeklyReviewData {
+  weight: { date: string; weight: number }[];
+  measurements: { date: string; waist: number; hip: number; thigh: number; upperArm: number }[];
+  food: {
+    id: string;
+    mealType: string;
+    foodDescription: string;
+    portion: number;
+    hungerLevel: number;
+    triggerReason: string;
+    emotion: string;
+    feeling: string;
+    createdAt: Date;
+  }[];
+  exercise: {
+    id: string;
+    exerciseType: string;
+    duration: number;
+    calories: number;
+    intensity: string;
+    createdAt: Date;
+  }[];
+}
+
 export default function FoodPage() {
   const { user } = useAuth();
   const [selectedMealType, setSelectedMealType] = useState<MealType>("breakfast");
@@ -75,6 +100,9 @@ export default function FoodPage() {
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [error, setError] = useState("");
   const [showReview, setShowReview] = useState(false);
+  const [activeTab, setActiveTab] = useState("daily");
+  const [weeklyData, setWeeklyData] = useState<WeeklyReviewData | null>(null);
+  const [isLoadingWeekly, setIsLoadingWeekly] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -195,6 +223,151 @@ export default function FoodPage() {
     };
   };
 
+  const getWeekStartDate = (date: Date): string => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    return d.toISOString().split("T")[0];
+  };
+
+  const loadWeeklyData = async () => {
+    if (!user) return;
+    setIsLoadingWeekly(true);
+    try {
+      const weekStart = getWeekStartDate(new Date());
+      const data = await getWeeklyData(user.uid, weekStart);
+      setWeeklyData(data);
+    } catch (err) {
+      console.error("加载周数据失败:", err);
+    } finally {
+      setIsLoadingWeekly(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "weekly" && !weeklyData) {
+      loadWeeklyData();
+    }
+  }, [activeTab]);
+
+  const generateWeeklyReview = () => {
+    if (!weeklyData) return null;
+
+    const weightChanges = weeklyData.weight;
+    let weightChange = 0;
+    if (weightChanges.length >= 2) {
+      const firstWeight = weightChanges[0].weight;
+      const lastWeight = weightChanges[weightChanges.length - 1].weight;
+      weightChange = lastWeight - firstWeight;
+    }
+
+    const avgWeight = weightChanges.length > 0
+      ? weightChanges.reduce((sum, w) => sum + w.weight, 0) / weightChanges.length
+      : 0;
+
+    const measurementChanges = weeklyData.measurements;
+    let waistChange = 0;
+    let hipChange = 0;
+    if (measurementChanges.length >= 2) {
+      waistChange = measurementChanges[measurementChanges.length - 1].waist - measurementChanges[0].waist;
+      hipChange = measurementChanges[measurementChanges.length - 1].hip - measurementChanges[0].hip;
+    }
+
+    const foodData = weeklyData.food;
+    const mainMeals = ["breakfast", "lunch", "dinner"];
+    const daysWithMainMeals = new Set<string>();
+    const completedMealsPerDay: Record<string, number> = {};
+
+    foodData.forEach((r) => {
+      const date = new Date(r.createdAt).toISOString().split("T")[0];
+      daysWithMainMeals.add(date);
+      if (mainMeals.includes(r.mealType)) {
+        completedMealsPerDay[date] = (completedMealsPerDay[date] || 0) + 1;
+      }
+    });
+
+    const executionRate = Object.values(completedMealsPerDay).filter((v) => v >= 3).length;
+    const totalDays = daysWithMainMeals.size || 1;
+    const executionPercent = Math.round((executionRate / totalDays) * 100);
+
+    const snackTypes = ["morningSnack", "afternoonSnack", "eveningSnack"];
+    const snackRecords = foodData.filter((r) => snackTypes.includes(r.mealType));
+    const triggerReasonsList = ["craving", "stress", "boredom", "habit", "social", "timeConflict"];
+    const triggeredSnacks = snackRecords.filter((r) => triggerReasonsList.includes(r.triggerReason));
+    const triggerCount = triggeredSnacks.length;
+
+    const emotionFoodMap: Record<string, number[]> = {};
+    foodData.forEach((r) => {
+      if (r.emotion && r.emotion !== "unknown") {
+        if (!emotionFoodMap[r.emotion]) {
+          emotionFoodMap[r.emotion] = [];
+        }
+        emotionFoodMap[r.emotion].push(r.hungerLevel);
+      }
+    });
+
+    const emotionCorrelation: { emotion: string; avgHunger: number; count: number }[] = [];
+    Object.entries(emotionFoodMap).forEach(([emotion, hungerLevels]) => {
+      emotionCorrelation.push({
+        emotion,
+        avgHunger: hungerLevels.reduce((a, b) => a + b, 0) / hungerLevels.length,
+        count: hungerLevels.length,
+      });
+    });
+    emotionCorrelation.sort((a, b) => b.avgHunger - a.avgHunger);
+
+    const triggerFoodMap: Record<string, number> = {};
+    snackRecords.forEach((r) => {
+      if (r.triggerReason && r.triggerReason !== "unknown") {
+        triggerFoodMap[r.triggerReason] = (triggerFoodMap[r.triggerReason] || 0) + 1;
+      }
+    });
+
+    const triggerRanking: { reason: string; count: number }[] = [];
+    Object.entries(triggerFoodMap).forEach(([reason, count]) => {
+      triggerRanking.push({ reason, count });
+    });
+    triggerRanking.sort((a, b) => b.count - a.count);
+
+    const goodThings: string[] = [];
+    if (weightChange < 0) goodThings.push("体重有所下降");
+    if (executionPercent >= 60) goodThings.push("三餐规律性改善");
+    if (triggerCount <= 3) goodThings.push("触发性进食控制良好");
+
+    const strategies: string[] = [];
+    if (triggerCount > 3) {
+      strategies.push("识别高风险时段，提前准备健康零食");
+    }
+    if (emotionCorrelation.length > 0) {
+      strategies.push(`注意${emotionCorrelation[0].emotion}情绪时的饮食冲动`);
+    }
+    if (triggerRanking.length > 0) {
+      const topTrigger = triggerRanking[0];
+      if (topTrigger.count > 2) {
+        strategies.push(`避免${getTriggerLabel(topTrigger.reason)}场景`);
+      }
+    }
+    if (strategies.length < 3) {
+      strategies.push("继续记录饮食数据");
+      strategies.push("保持当前良好的饮食习惯");
+    }
+
+    return {
+      weightChange,
+      avgWeight,
+      waistChange,
+      hipChange,
+      executionPercent,
+      triggerCount,
+      emotionCorrelation: emotionCorrelation.slice(0, 3),
+      triggerRanking: triggerRanking.slice(0, 3),
+      goodThings: goodThings.length > 0 ? goodThings : ["保持良好饮食习惯"],
+      strategies: strategies.slice(0, 3),
+    };
+  };
+
+  const weeklyReview = weeklyData && weeklyData.food.length > 0 ? generateWeeklyReview() : null;
   const review = todayRecords.length > 0 ? generateDailyReview() : null;
 
   const totalRecords = todayRecords.length;
@@ -206,125 +379,132 @@ export default function FoodPage() {
         <p className="text-zinc-500">记录您的每日饮食</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">今日记录</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <UtensilsCrossed className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">{totalRecords} 餐</span>
-            </div>
-          </CardContent>
-        </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="daily">日复盘</TabsTrigger>
+          <TabsTrigger value="weekly">周复盘</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">加餐次数</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">{getSnackCount()} 次</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">平均饥饿度</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">
-                {totalRecords > 0 
-                  ? (todayRecords.reduce((sum, r) => sum + r.hungerLevel, 0) / totalRecords).toFixed(1)
-                  : "--"
-                }
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {todayRecords.length > 0 && (
-        <Button 
-          variant="outline" 
-          className="w-full"
-          onClick={() => setShowReview(!showReview)}
-        >
-          <TrendingUp className="h-4 w-4 mr-2" />
-          {showReview ? "收起复盘" : "查看今日复盘"}
-        </Button>
-      )}
-
-      {showReview && review && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              日复盘 - {today}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-zinc-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
-                  <span className="font-medium">今日执行度</span>
+        <TabsContent value="daily" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-500">今日记录</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <UtensilsCrossed className="h-5 w-5 text-zinc-400" />
+                  <span className="text-2xl font-bold">{totalRecords} 餐</span>
                 </div>
-                <span className="text-3xl font-bold text-blue-600">{review.executionRate}%</span>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="p-4 bg-zinc-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-4 w-4 text-orange-500" />
-                  <span className="font-medium">触发性进食</span>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-500">加餐次数</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-zinc-400" />
+                  <span className="text-2xl font-bold">{getSnackCount()} 次</span>
                 </div>
-                <span className="text-3xl font-bold text-orange-600">{review.triggerCount} 次</span>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="font-medium">做得好的事</span>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-zinc-500">平均饥饿度</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-zinc-400" />
+                  <span className="text-2xl font-bold">
+                    {totalRecords > 0 
+                      ? (todayRecords.reduce((sum, r) => sum + r.hungerLevel, 0) / totalRecords).toFixed(1)
+                      : "--"
+                    }
+                  </span>
                 </div>
-                <ul className="space-y-1">
-                  {review.goodThings.map((item, idx) => (
-                    <li key={idx} className="text-zinc-700 flex items-center gap-2">
-                      <span className="text-green-500">✓</span> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
 
-              <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
-                  <span className="font-medium">明日优先改进</span>
+          {todayRecords.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => setShowReview(!showReview)}
+            >
+              <TrendingUp className="h-4 w-4 mr-2" />
+              {showReview ? "收起复盘" : "查看今日复盘"}
+            </Button>
+          )}
+
+          {showReview && review && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  日复盘 - {today}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 bg-zinc-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      <span className="font-medium">今日执行度</span>
+                    </div>
+                    <span className="text-3xl font-bold text-blue-600">{review.executionRate}%</span>
+                  </div>
+
+                  <div className="p-4 bg-zinc-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-orange-500" />
+                      <span className="font-medium">触发性进食</span>
+                    </div>
+                    <span className="text-3xl font-bold text-orange-600">{review.triggerCount} 次</span>
+                  </div>
+
+                  <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span className="font-medium">做得好的事</span>
+                    </div>
+                    <ul className="space-y-1">
+                      {review.goodThings.map((item, idx) => (
+                        <li key={idx} className="text-zinc-700 flex items-center gap-2">
+                          <span className="text-green-500">✓</span> {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lightbulb className="h-4 w-4 text-amber-500" />
+                      <span className="font-medium">明日优先改进</span>
+                    </div>
+                    <ul className="space-y-1">
+                      {review.improvements.map((item, idx) => (
+                        <li key={idx} className="text-zinc-700 flex items-center gap-2">
+                          <span className="text-amber-500">→</span> {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-                <ul className="space-y-1">
-                  {review.improvements.map((item, idx) => (
-                    <li key={idx} className="text-zinc-700 flex items-center gap-2">
-                      <span className="text-amber-500">→</span> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </CardContent>
+            </Card>
+          )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>记录饮��</CardTitle>
-          <CardDescription>选择时段并填写饮食详情</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>记录饮食</CardTitle>
+              <CardDescription>选择时段并填写饮食详情</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
             <div className="flex flex-wrap gap-2">
               {mealTypes.map((type) => (
                 <Button
@@ -503,6 +683,192 @@ export default function FoodPage() {
           </CardContent>
         </Card>
       )}
+      </TabsContent>
+
+      <TabsContent value="weekly" className="space-y-6">
+          {isLoadingWeekly ? (
+            <Card>
+              <CardContent className="py-10">
+                <p className="text-center text-zinc-500">加载中...</p>
+              </CardContent>
+            </Card>
+          ) : weeklyReview ? (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-zinc-500">体重周变化</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Scale className="h-5 w-5 text-zinc-400" />
+                      <span className={`text-2xl font-bold ${weeklyReview.weightChange < 0 ? "text-green-600" : "text-red-600"}`}>
+                        {weeklyReview.weightChange > 0 ? "+" : ""}{weeklyReview.weightChange.toFixed(1)} kg
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-zinc-500">腰围变化</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Ruler className="h-5 w-5 text-zinc-400" />
+                      <span className={`text-2xl font-bold ${weeklyReview.waistChange < 0 ? "text-green-600" : "text-red-600"}`}>
+                        {weeklyReview.waistChange > 0 ? "+" : ""}{weeklyReview.waistChange.toFixed(1)} cm
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-zinc-500">执行度</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-zinc-400" />
+                      <span className="text-2xl font-bold">{weeklyReview.executionPercent}%</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-zinc-500">触发性进食</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-zinc-400" />
+                      <span className="text-2xl font-bold">{weeklyReview.triggerCount} 次</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    周复盘 - {getWeekStartDate(new Date())} ~ {today}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-zinc-50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Scale className="h-4 w-4 text-blue-500" />
+                        <span className="font-medium">体重周均</span>
+                      </div>
+                      <span className="text-2xl font-bold text-blue-600">{weeklyReview.avgWeight.toFixed(1)} kg</span>
+                    </div>
+
+                    <div className="p-4 bg-zinc-50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Ruler className="h-4 w-4 text-purple-500" />
+                        <span className="font-medium">臀围变化</span>
+                      </div>
+                      <span className={`text-2xl font-bold ${weeklyReview.hipChange < 0 ? "text-green-600" : "text-red-600"}`}>
+                        {weeklyReview.hipChange > 0 ? "+" : ""}{weeklyReview.hipChange.toFixed(1)} cm
+                      </span>
+                    </div>
+
+                    <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="font-medium">做得好的事</span>
+                      </div>
+                      <ul className="space-y-1">
+                        {weeklyReview.goodThings.map((item, idx) => (
+                          <li key={idx} className="text-zinc-700 flex items-center gap-2">
+                            <span className="text-green-500">✓</span> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Heart className="h-5 w-5 text-red-500" />
+                    情绪-进食关联分析
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {weeklyReview.emotionCorrelation.length > 0 ? (
+                    <div className="space-y-2">
+                      {weeklyReview.emotionCorrelation.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                          <span className="font-medium">{getEmotionLabel(item.emotion)}</span>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-zinc-500">平均饥饿度: {item.avgHunger.toFixed(1)}</span>
+                            <span className="text-sm text-zinc-500">{item.count} 次</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-zinc-500">暂无情绪数据</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-orange-500" />
+                    高风险场景 TOP3
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {weeklyReview.triggerRanking.length > 0 ? (
+                    <div className="space-y-2">
+                      {weeklyReview.triggerRanking.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                          <span className="font-medium">{getTriggerLabel(item.reason)}</span>
+                          <span className="text-orange-600 font-bold">{item.count} 次</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-zinc-500">暂无触发数据</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-amber-500" />
+                    下周可执行策略
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {weeklyReview.strategies.map((strategy, idx) => (
+                      <li key={idx} className="flex items-center gap-2 p-3 bg-zinc-50 rounded-lg">
+                        <Zap className="h-4 w-4 text-amber-500" />
+                        <span>{strategy}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-10">
+                <p className="text-center text-zinc-500">暂无周数据，请先记录每日饮食</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
