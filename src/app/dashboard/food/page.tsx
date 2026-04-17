@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { addDailyRecord, getDailyRecords, getFoodHistory } from "@/lib/firestore";
-import { UtensilsCrossed, Clock, Star, Heart, MessageSquare } from "lucide-react";
+import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "morningSnack" | "afternoonSnack" | "eveningSnack";
 
@@ -74,6 +74,7 @@ export default function FoodPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [error, setError] = useState("");
+  const [showReview, setShowReview] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -162,6 +163,40 @@ export default function FoodPage() {
     return found?.label || value;
   };
 
+  const generateDailyReview = () => {
+    const mainMeals = ["breakfast", "lunch", "dinner"];
+    const completedMainMeals = mainMeals.filter(type => 
+      todayRecords.some(r => r.mealType === type)
+    );
+    const executionRate = Math.round((completedMainMeals.length / 3) * 100);
+
+    const triggerReasonsList = ["craving", "stress", "boredom", "habit", "social", "timeConflict"];
+    const triggeredSnacks = todayRecords.filter(r => 
+      triggerReasonsList.includes(r.triggerReason)
+    );
+
+    const triggerCount = triggeredSnacks.length;
+
+    const goodThings: string[] = [];
+    if (executionRate >= 66) goodThings.push("三餐规律");
+    if (todayRecords.every(r => r.hungerLevel <= 3)) goodThings.push("饥饿控制良好");
+    if (todayRecords.some(r => r.feeling?.includes("满足") || r.feeling?.includes("饱"))) goodThings.push("进食满足感不错");
+
+    const improvements: string[] = [];
+    if (triggerCount > 2) improvements.push("减少非饥饿原因的加餐");
+    if (todayRecords.some(r => r.hungerLevel >= 4)) improvements.push("注意餐前饥饿感");
+    if (todayRecords.length < 3) improvements.push("确保每日三餐完整");
+
+    return {
+      executionRate,
+      triggerCount,
+      goodThings: goodThings.length > 0 ? goodThings : ["保持良好饮食习惯"],
+      improvements: improvements.length > 0 ? improvements : ["继续坚持当前饮食计划"]
+    };
+  };
+
+  const review = todayRecords.length > 0 ? generateDailyReview() : null;
+
   const totalRecords = todayRecords.length;
 
   return (
@@ -213,6 +248,75 @@ export default function FoodPage() {
           </CardContent>
         </Card>
       </div>
+
+      {todayRecords.length > 0 && (
+        <Button 
+          variant="outline" 
+          className="w-full"
+          onClick={() => setShowReview(!showReview)}
+        >
+          <TrendingUp className="h-4 w-4 mr-2" />
+          {showReview ? "收起复盘" : "查看今日复盘"}
+        </Button>
+      )}
+
+      {showReview && review && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              日复盘 - {today}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-zinc-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium">今日执行度</span>
+                </div>
+                <span className="text-3xl font-bold text-blue-600">{review.executionRate}%</span>
+              </div>
+
+              <div className="p-4 bg-zinc-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                  <span className="font-medium">触发性进食</span>
+                </div>
+                <span className="text-3xl font-bold text-orange-600">{review.triggerCount} 次</span>
+              </div>
+
+              <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="font-medium">做得好的事</span>
+                </div>
+                <ul className="space-y-1">
+                  {review.goodThings.map((item, idx) => (
+                    <li key={idx} className="text-zinc-700 flex items-center gap-2">
+                      <span className="text-green-500">✓</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
+                  <span className="font-medium">明日优先改进</span>
+                </div>
+                <ul className="space-y-1">
+                  {review.improvements.map((item, idx) => (
+                    <li key={idx} className="text-zinc-700 flex items-center gap-2">
+                      <span className="text-amber-500">→</span> {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
