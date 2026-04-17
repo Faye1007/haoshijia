@@ -7,7 +7,10 @@ import {
   query,
   getDocs,
   orderBy,
+  limit,
   Timestamp,
+  where,
+  getCountFromServer,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -72,4 +75,49 @@ export const getDailyRecords = async (
   const q = query(recordRef, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+export interface WeightRecord {
+  id: string;
+  weight: number;
+  createdAt: Date;
+  isMorning: boolean;
+}
+
+export const getWeightHistory = async (
+  userId: string,
+  days: number = 30
+): Promise<{ date: string; weight: number; isMorning: boolean }[]> => {
+  const records: { date: string; weight: number; isMorning: boolean }[] = [];
+  const today = new Date();
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+
+    const recordRef = collection(db, "records", userId, "daily", dateStr, "weight");
+    const q = query(recordRef, orderBy("createdAt", "asc"));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const dayRecords = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          date: dateStr,
+          weight: data.weight as number,
+          isMorning: data.isMorning as boolean,
+        };
+      });
+
+      const morningRecord = dayRecords.find((r) => r.isMorning);
+      if (morningRecord) {
+        records.push(morningRecord);
+      } else {
+        records.push(dayRecords[dayRecords.length - 1]);
+      }
+    }
+  }
+
+  return records.reverse();
 };
