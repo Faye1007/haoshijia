@@ -197,3 +197,45 @@ export const getFoodHistory = async (
     };
   });
 };
+
+export interface ExerciseRecord {
+  id: string;
+  exerciseType: string;
+  duration: number;
+  calories: number;
+  intensity: "light" | "medium" | "high";
+  createdAt: Date;
+}
+
+export const addExerciseRecord = async (
+  userId: string,
+  date: string,
+  data: Omit<ExerciseRecord, "id" | "createdAt">
+) => {
+  const recordRef = collection(db, "records", userId, "daily", date, "exercise");
+  await addDoc(recordRef, {
+    ...data,
+    createdAt: Timestamp.fromDate(new Date()),
+  });
+};
+
+export const getExerciseHistory = async (
+  userId: string,
+  date: string
+): Promise<ExerciseRecord[]> => {
+  const recordRef = collection(db, "records", userId, "daily", date, "exercise");
+  const q = query(recordRef, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      exerciseType: data.exerciseType as string,
+      duration: data.duration as number,
+      calories: data.calories as number,
+      intensity: data.intensity as "light" | "medium" | "high",
+      createdAt: data.createdAt?.toDate() || new Date(),
+    };
+  });
+};
