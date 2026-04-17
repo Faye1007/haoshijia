@@ -161,3 +161,39 @@ export const getMeasurementHistory = async (
 
   return records.reverse();
 };
+
+export interface FoodRecord {
+  id: string;
+  mealType: string;
+  foodDescription: string;
+  portion: number;
+  hungerLevel: number;
+  triggerReason: string;
+  emotion: string;
+  feeling: string;
+  createdAt: Date;
+}
+
+export const getFoodHistory = async (
+  userId: string,
+  date: string
+): Promise<FoodRecord[]> => {
+  const recordRef = collection(db, "records", userId, "daily", date, "food");
+  const q = query(recordRef, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      mealType: data.mealType as string,
+      foodDescription: data.foodDescription as string,
+      portion: data.portion as number,
+      hungerLevel: data.hungerLevel as number,
+      triggerReason: data.triggerReason as string,
+      emotion: data.emotion as string,
+      feeling: data.feeling as string,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    };
+  });
+};
