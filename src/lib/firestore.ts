@@ -11,6 +11,7 @@ import {
   Timestamp,
   where,
   getCountFromServer,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -327,4 +328,69 @@ export const getWeeklyData = async (
     food: foodData,
     exercise: exerciseData,
   };
+};
+
+export interface Plan {
+  id: string;
+  userId: string;
+  weekId: string;
+  weekStart: string;
+  weekEnd: string;
+  triggerWarnings: { reason: string; count: number; recommendations: string[] }[];
+  emotionPlans: { emotion: string; plan: string }[];
+  mealSchedule: { day: string; meals: { time: string; type: string; suggestion: string; alternative: string }[] }[];
+  avoidFoods: string[];
+  createdAt: Date;
+}
+
+export const savePlan = async (
+  userId: string,
+  data: Omit<Plan, "id" | "createdAt">
+) => {
+  const planRef = collection(db, "plans", userId, "weekly");
+  await addDoc(planRef, {
+    ...data,
+    createdAt: Timestamp.fromDate(new Date()),
+  });
+};
+
+export const getPlans = async (
+  userId: string
+): Promise<Plan[]> => {
+  const planRef = collection(db, "plans", userId, "weekly");
+  const q = query(planRef, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      userId: data.userId as string,
+      weekId: data.weekId as string,
+      weekStart: data.weekStart as string,
+      weekEnd: data.weekEnd as string,
+      triggerWarnings: data.triggerWarnings as Plan["triggerWarnings"],
+      emotionPlans: data.emotionPlans as Plan["emotionPlans"],
+      mealSchedule: data.mealSchedule as Plan["mealSchedule"],
+      avoidFoods: data.avoidFoods as string[],
+      createdAt: data.createdAt?.toDate() || new Date(),
+    };
+  });
+};
+
+export const updatePlan = async (
+  userId: string,
+  planId: string,
+  data: Partial<Omit<Plan, "id" | "userId" | "createdAt">>
+) => {
+  const planRef = doc(db, "plans", userId, "weekly", planId);
+  await setDoc(planRef, data, { merge: true });
+};
+
+export const deletePlan = async (
+  userId: string,
+  planId: string
+) => {
+  const planRef = doc(db, "plans", userId, "weekly", planId);
+  await deleteDoc(planRef);
 };

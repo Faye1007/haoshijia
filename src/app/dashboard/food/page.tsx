@@ -14,8 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, getDailyRecords, getFoodHistory, getWeeklyData } from "@/lib/firestore";
-import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Scale, Ruler, Calendar, Target, Zap } from "lucide-react";
+import { addDailyRecord, getDailyRecords, getFoodHistory, getWeeklyData, savePlan, getPlans, updatePlan, deletePlan, type Plan } from "@/lib/firestore";
+import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Scale, Ruler, Calendar, Target, Zap, FileText, Trash2, Edit2, Save, X } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "morningSnack" | "afternoonSnack" | "eveningSnack";
 
@@ -103,6 +103,10 @@ export default function FoodPage() {
   const [activeTab, setActiveTab] = useState("daily");
   const [weeklyData, setWeeklyData] = useState<WeeklyReviewData | null>(null);
   const [isLoadingWeekly, setIsLoadingWeekly] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -251,6 +255,149 @@ export default function FoodPage() {
     }
   }, [activeTab]);
 
+  const loadPlans = async () => {
+    if (!user) return;
+    setIsLoadingPlans(true);
+    try {
+      const data = await getPlans(user.uid);
+      setPlans(data);
+    } catch (err) {
+      console.error("加载计划失败:", err);
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "plans" && plans.length === 0) {
+      loadPlans();
+    }
+  }, [activeTab]);
+
+  const getNextWeekId = (startDate: Date): string => {
+    const year = startDate.getFullYear();
+    const week = Math.ceil((startDate.getTime() - new Date(year, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+    return `${year}-W${week}`;
+  };
+
+  const generateWeeklyPlan = async () => {
+    if (!user || !weeklyReview) return;
+
+    const weekStart = getWeekStartDate(new Date());
+    const weekEndDate = new Date(weekStart);
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    const weekEnd = weekEndDate.toISOString().split("T")[0];
+
+    const triggerWarnings = weeklyReview.triggerRanking.map((item) => ({
+      reason: item.reason,
+      count: item.count,
+      recommendations: [] as string[],
+    }));
+
+    for (const warning of triggerWarnings) {
+      if (warning.reason === "craving") {
+        warning.recommendations = ["使用无糖口香糖", "喝温水或茶", "刷牙转移注意力"];
+      } else if (warning.reason === "stress") {
+        warning.recommendations = ["5分钟深呼吸", "短暂散步", "给朋友打电话"];
+      } else if (warning.reason === "boredom") {
+        warning.recommendations = ["找件事做", "整理房间", "阅读书籍"];
+      } else if (warning.reason === "habit") {
+        warning.recommendations = ["换环境", "建立新习惯替代"];
+      } else if (warning.reason === "social") {
+        warning.recommendations = ["提前吃饱再去聚会", "选择健康食物"];
+      } else if (warning.reason === "timeConflict") {
+        warning.recommendations = ["提前准备健康零食", "设置提醒"];
+      }
+    }
+
+    const emotionPlans = weeklyReview.emotionCorrelation.map((item) => ({
+      emotion: item.emotion,
+      plan: `注意${getEmotionLabel(item.emotion)}情绪时的冲动，可使用${item.avgHunger > 3 ? "深呼吸" : "短暂运动"}来转移注意力`,
+    }));
+
+    const mealSchedule: Plan["mealSchedule"] = [];
+    const days = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    const snackTimes = [
+      { time: "10:00", type: "morningSnack", suggestion: "坚果/水果", alternative: "无糖酸奶" },
+      { time: "15:30", type: "afternoonSnack", suggestion: "全麦饼干/坚果", alternative: "黑巧克力(50g)" },
+      { time: "20:00", type: "eveningSnack", suggestion: "不吃或喝水", alternative: "黄瓜/番茄" },
+    ];
+
+    for (let i = 0; i < 7; i++) {
+      const daySchedule: { day: string; meals: { time: string; type: string; suggestion: string; alternative: string }[] } = {
+        day: days[i],
+        meals: [],
+      };
+
+      daySchedule.meals.push(
+        { time: "07:00", type: "breakfast", suggestion: "全麦面包+鸡蛋+牛奶", alternative: "燕麦+水果" },
+        { time: "12:00", type: "lunch", suggestion: "主食+蛋白质+蔬菜", alternative: "沙拉+鸡胸肉" },
+        { time: "18:30", type: "dinner", suggestion: "蛋白质+蔬菜(少吃主食)", alternative: "清蒸鱼+绿叶菜" }
+      );
+
+      if (weeklyReview.triggerCount > 3) {
+        daySchedule.meals.push(...snackTimes);
+      }
+
+      mealSchedule.push(daySchedule);
+    }
+
+    const avoidFoods: string[] = [];
+    if (triggerWarnings.some(w => w.reason === "craving")) {
+      avoidFoods.push("高糖零食", "甜饮料", "冰淇淋");
+    }
+    if (triggerWarnings.some(w => w.reason === "stress")) {
+      avoidFoods.push("薯片", "方便面", "油炸食品");
+    }
+    if (avoidFoods.length === 0) {
+      avoidFoods.push("暂无特殊忌口");
+    }
+
+    await savePlan(user.uid, {
+      userId: user.uid,
+      weekId: getNextWeekId(new Date(weekStart)),
+      weekStart,
+      weekEnd,
+      triggerWarnings,
+      emotionPlans,
+      mealSchedule,
+      avoidFoods,
+    });
+
+    loadPlans();
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (!user) return;
+    try {
+      await deletePlan(user.uid, planId);
+      loadPlans();
+    } catch (err) {
+      console.error("删除失败:", err);
+    }
+  };
+
+  const handleUpdatePlan = async (planId: string) => {
+    if (!user || !editingPlan) return;
+    setIsSavingPlan(true);
+    try {
+      await updatePlan(user.uid, planId, {
+        triggerWarnings: editingPlan.triggerWarnings,
+        emotionPlans: editingPlan.emotionPlans,
+        mealSchedule: editingPlan.mealSchedule,
+        avoidFoods: editingPlan.avoidFoods,
+      });
+      setEditingPlan(null);
+      loadPlans();
+    } catch (err) {
+      console.error("更新失败:", err);
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
   const generateWeeklyReview = () => {
     if (!weeklyData) return null;
 
@@ -380,9 +527,10 @@ export default function FoodPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="daily">日复盘</TabsTrigger>
           <TabsTrigger value="weekly">周复盘</TabsTrigger>
+          <TabsTrigger value="plans">周计划</TabsTrigger>
         </TabsList>
 
         <TabsContent value="daily" className="space-y-6">
@@ -864,6 +1012,193 @@ export default function FoodPage() {
             <Card>
               <CardContent className="py-10">
                 <p className="text-center text-zinc-500">暂无周数据，请先记录每日饮食</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="plans" className="space-y-6">
+          {weeklyReview && weeklyReview.triggerRanking.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  生成下周计划
+                </CardTitle>
+                <CardDescription>根据本周复盘数据生成下周饮食计划</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button onClick={generateWeeklyPlan} disabled={isSaving}>
+                  <Zap className="h-4 w-4 mr-2" />
+                  一键生成下周计划
+                </Button>
+                {saveSuccess && <p className="text-sm text-green-600 mt-2">计划生成成功！</p>}
+              </CardContent>
+            </Card>
+          )}
+
+          {isLoadingPlans ? (
+            <Card>
+              <CardContent className="py-10">
+                <p className="text-center text-zinc-500">加载中...</p>
+              </CardContent>
+            </Card>
+          ) : plans.length > 0 ? (
+            <div className="space-y-6">
+              {plans.map((plan) => (
+                <Card key={plan.id}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <FileText className="h-5 w-5" />
+                        {plan.weekStart} ~ {plan.weekEnd}
+                      </CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingPlan(plan)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeletePlan(plan.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {editingPlan?.id === plan.id ? (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="mb-2 block">忌口食物（用逗号分隔）</Label>
+                          <Input
+                            value={editingPlan.avoidFoods.join(", ")}
+                            onChange={(e) =>
+                              setEditingPlan({
+                                ...editingPlan,
+                                avoidFoods: e.target.value.split(",").map((s) => s.trim()),
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={() => handleUpdatePlan(plan.id)} disabled={isSavingPlan}>
+                            <Save className="h-4 w-4 mr-2" />
+                            保存
+                          </Button>
+                          <Button variant="outline" onClick={() => setEditingPlan(null)}>
+                            <X className="h-4 w-4 mr-2" />
+                            取消
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {plan.triggerWarnings && plan.triggerWarnings.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 text-orange-500" />
+                              高风险触发预警
+                            </h4>
+                            <div className="space-y-2">
+                              {plan.triggerWarnings.map((warning, idx) => (
+                                <div key={idx} className="p-3 bg-zinc-50 rounded-lg">
+                                  <div className="flex items-center justify-between">
+                                    <span className="font-medium">{getTriggerLabel(warning.reason)}</span>
+                                    <span className="text-orange-600 font-bold">{warning.count} 次</span>
+                                  </div>
+                                  {warning.recommendations.length > 0 && (
+                                    <ul className="mt-2 text-sm text-zinc-600 space-y-1">
+                                      {warning.recommendations.map((rec, i) => (
+                                        <li key={i} className="flex items-center gap-2">
+                                          <span className="text-green-500">→</span> {rec}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {plan.emotionPlans && plan.emotionPlans.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <Heart className="h-4 w-4 text-red-500" />
+                              情绪应对计划
+                            </h4>
+                            <div className="space-y-2">
+                              {plan.emotionPlans.map((item, idx) => (
+                                <div key={idx} className="p-3 bg-zinc-50 rounded-lg">
+                                  <span className="font-medium">{getEmotionLabel(item.emotion)}</span>
+                                  <p className="text-sm text-zinc-600">{item.plan}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {plan.mealSchedule && plan.mealSchedule.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-blue-500" />
+                              下周饮食安排
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {plan.mealSchedule.slice(0, 7).map((daySchedule, idx) => (
+                                <div key={idx} className="p-3 bg-zinc-50 rounded-lg">
+                                  <h5 className="font-medium mb-2">{daySchedule.day}</h5>
+                                  <div className="space-y-1 text-sm">
+                                    {daySchedule.meals.map((meal, i) => (
+                                      <div key={i} className="flex items-start gap-2">
+                                        <span className="text-zinc-400 w-12">{meal.time}</span>
+                                        <div>
+                                          <span>{getTriggerLabel(meal.type) || meal.type}</span>
+                                          <span className="text-zinc-500 ml-2">{meal.suggestion}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {plan.avoidFoods && plan.avoidFoods.length > 0 && (
+                          <div>
+                            <h4 className="font-medium mb-2 flex items-center gap-2">
+                              <X className="h-4 w-4 text-red-500" />
+                              避免食物
+                            </h4>
+                            <div className="flex flex-wrap gap-2">
+                              {plan.avoidFoods.map((food, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-3 py-1 bg-red-50 text-red-600 rounded-full text-sm"
+                                >
+                                  {food}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-10">
+                <p className="text-center text-zinc-500">暂无周计划，请在周复盘 Tab 生成计划</p>
               </CardContent>
             </Card>
           )}
