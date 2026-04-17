@@ -84,6 +84,15 @@ export interface WeightRecord {
   isMorning: boolean;
 }
 
+export interface MeasurementRecord {
+  id: string;
+  waist: number;
+  hip: number;
+  thigh: number;
+  upperArm: number;
+  createdAt: Date;
+}
+
 export const getWeightHistory = async (
   userId: string,
   days: number = 30
@@ -116,6 +125,37 @@ export const getWeightHistory = async (
       } else {
         records.push(dayRecords[dayRecords.length - 1]);
       }
+    }
+  }
+
+  return records.reverse();
+};
+
+export const getMeasurementHistory = async (
+  userId: string,
+  days: number = 30
+): Promise<{ date: string; waist: number; hip: number; thigh: number; upperArm: number }[]> => {
+  const records: { date: string; waist: number; hip: number; thigh: number; upperArm: number }[] = [];
+  const today = new Date();
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+
+    const recordRef = collection(db, "records", userId, "daily", dateStr, "measurement");
+    const q = query(recordRef, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      const docData = snapshot.docs[0].data();
+      records.push({
+        date: dateStr,
+        waist: docData.waist as number,
+        hip: docData.hip as number,
+        thigh: docData.thigh as number,
+        upperArm: docData.upperArm as number,
+      });
     }
   }
 
