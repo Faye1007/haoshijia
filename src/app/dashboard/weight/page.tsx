@@ -28,7 +28,9 @@ export default function WeightPage() {
   const [recordTime, setRecordTime] = useState("");
   const [isMorning, setIsMorning] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
   const [viewDays, setViewDays] = useState<number>(7);
@@ -52,6 +54,7 @@ export default function WeightPage() {
       isMorning: r.isMorning as boolean,
     }));
     setTodayRecords(formatted);
+    setIsLoading(false);
   };
 
   const loadHistory = async () => {
@@ -121,12 +124,40 @@ export default function WeightPage() {
     ? (historyData[historyData.length - 1].weight - historyData[0].weight).toFixed(1)
     : null;
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 mx-auto mb-4"></div>
+          <p className="text-zinc-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">体重记录</h2>
         <p className="text-zinc-500">记录您的体重变化</p>
       </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowHint(!showHint)}
+          className="text-sm text-zinc-400 hover:text-zinc-600"
+        >
+          {showHint ? "收起提示" : "查看建议"}
+        </button>
+      </div>
+
+      {showHint && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+          <p>• 建议每天晨起空腹称重，数据更准确</p>
+          <p>• 固定时间称重，便于对比</p>
+          <p>• 晨起体重是最轻的体重</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

@@ -1,10 +1,12 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useEffect, useState } from "react";
+import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp, Ruler } from "lucide-react";
 
 interface UserProfile {
   currentWeight?: number;
@@ -75,6 +77,8 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [todayWeight, setTodayWeight] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -83,7 +87,13 @@ export default function DashboardPage() {
       
       const profileDoc = await getDoc(doc(db, "users", user.uid));
       if (profileDoc.exists()) {
-        setProfile(profileDoc.data() as UserProfile);
+        const data = profileDoc.data() as UserProfile;
+        setProfile(data);
+        if (!data.targetWeight || !data.currentWeight) {
+          setShowGuide(true);
+        }
+      } else {
+        setShowGuide(true);
       }
 
       const weightDoc = await getDoc(doc(db, "records", user.uid, "daily", today));
@@ -91,12 +101,64 @@ export default function DashboardPage() {
         const data = weightDoc.data();
         if (data.weight) setTodayWeight(data.weight);
       }
+      setIsLoading(false);
     }
     fetchData();
   }, [user]);
 
+  const quickGuides = [
+    { icon: Scale, title: "记录体重", desc: "晨起空腹称重最准确", href: "/dashboard/weight" },
+    { icon: UtensilsCrossed, title: "记录饮食", desc: "记录每餐进食情况", href: "/dashboard/food" },
+    { icon: TrendingUp, title: "记录围度", desc: "腰臀围等身体数据", href: "/dashboard/measurements" },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 mx-auto mb-4"></div>
+          <p className="text-zinc-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {showGuide && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <HelpCircle className="h-5 w-5" />
+              欢迎使用好食家
+            </CardTitle>
+            <CardDescription className="text-blue-600">
+              让我们先设置您的目标体重，开始健康减脂之旅
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              {quickGuides.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="flex items-center gap-3 p-3 bg-white rounded-lg border hover:border-blue-300 transition-colors"
+                >
+                  <item.icon className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <div className="font-medium text-sm">{item.title}</div>
+                    <div className="text-xs text-zinc-500">{item.desc}</div>
+                  </div>
+                </a>
+              ))}
+            </div>
+            <Button onClick={() => setShowGuide(false)} variant="outline" size="sm">
+              暂时跳过 <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div>
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">仪表盘</h2>
         <p className="text-zinc-500">欢迎回来 {user?.email}</p>

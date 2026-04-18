@@ -23,7 +23,9 @@ interface FormErrors {
 export default function GoalPage() {
   const { user } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     currentWeight: "",
     targetWeight: "",
@@ -43,6 +45,7 @@ export default function GoalPage() {
           ...(profile.targetDate ? { targetDate: profile.targetDate.toISOString().split("T")[0] } : {}),
         }));
       }
+      setIsLoading(false);
     }
     loadGoal();
   }, [user]);
@@ -118,12 +121,40 @@ export default function GoalPage() {
   const current = parseFloat(formData.currentWeight);
   const target = parseFloat(formData.targetWeight);
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 mx-auto mb-4"></div>
+          <p className="text-zinc-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">目标设定</h2>
         <p className="text-zinc-500">设置您的减重目标</p>
       </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowHint(!showHint)}
+          className="text-sm text-zinc-400 hover:text-zinc-600"
+        >
+          {showHint ? "收起提示" : "查看建议"}
+        </button>
+      </div>
+
+      {showHint && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+          <p>• 建议每周减重 0.5kg 左右，健康且可持续</p>
+          <p>• 目标日期建议设置 3-6 个月</p>
+          <p>• 当前体重为晨起空腹体重更准确</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <Card>

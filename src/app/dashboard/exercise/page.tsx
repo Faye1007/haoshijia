@@ -40,7 +40,9 @@ export default function ExercisePage() {
   const [calories, setCalories] = useState("");
   const [intensity, setIntensity] = useState<"light" | "medium" | "high">("medium");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [todayRecords, setTodayRecords] = useState<ExerciseRecord[]>([]);
   const [error, setError] = useState("");
 
@@ -55,6 +57,7 @@ export default function ExercisePage() {
     if (!user) return;
     const records = await getExerciseHistory(user.uid, today);
     setTodayRecords(records);
+    setIsLoading(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

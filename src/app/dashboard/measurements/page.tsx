@@ -48,7 +48,9 @@ export default function MeasurementsPage() {
   const [thigh, setThigh] = useState("");
   const [upperArm, setUpperArm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showHint, setShowHint] = useState(false);
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
   const [viewDays, setViewDays] = useState<number>(7);
@@ -63,6 +65,7 @@ export default function MeasurementsPage() {
   }, [user, viewDays]);
 
   const loadTodayRecords = async () => {
+    setIsLoading(true);
     if (!user) return;
     const records = await getDailyRecords(user.uid, today, "measurement");
     const formatted = records.map((r: Record<string, unknown>) => ({
@@ -74,6 +77,7 @@ export default function MeasurementsPage() {
       createdAt: (r.createdAt as { toDate: () => Date }).toDate(),
     }));
     setTodayRecords(formatted);
+    setIsLoading(false);
   };
 
   const loadHistory = async () => {
@@ -172,12 +176,40 @@ export default function MeasurementsPage() {
     return <Minus className="h-5 w-5 text-zinc-400" />;
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 mx-auto mb-4"></div>
+          <p className="text-zinc-500">加载中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">围度记录</h2>
         <p className="text-zinc-500">记录您的身体围度变化</p>
       </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowHint(!showHint)}
+          className="text-sm text-zinc-400 hover:text-zinc-600"
+        >
+          {showHint ? "收起提示" : "查看建议"}
+        </button>
+      </div>
+
+      {showHint && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+          <p>• 建议每周同一天测量，保持一致性</p>
+          <p>• 腰围在肚脐上方约 2cm 处测量</p>
+          <p>• 臀围在臀部最宽处测量</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {["waist", "hip", "thigh", "upperArm"].map((key) => (
