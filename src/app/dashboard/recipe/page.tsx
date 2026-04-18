@@ -4,9 +4,20 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
-import { getIngredients, Ingredient } from "@/lib/firestore";
-import { ChefHat, Calendar, Clock, Leaf, AlertCircle, CheckCircle } from "lucide-react";
+import { getIngredients, Ingredient, getUserProfile, updateUserProfile } from "@/lib/firestore";
+import { ChefHat, Calendar, Clock, Leaf, AlertCircle, CheckCircle, Settings, Flame } from "lucide-react";
+
+interface UserSettings {
+  scenario: "宿舍" | "出租屋" | "家庭";
+  devices: string[];
+  availableTime: number;
+  hungryTimes: string[];
+  preferredMethods: string[];
+}
 
 interface MealPlan {
   day: string;
@@ -16,10 +27,20 @@ interface MealPlan {
     main: string;
     side: string;
     method: string;
+    tip?: string;
   }[];
 }
 
 const mealTypes = ["早餐", "午餐", "晚餐"];
+
+const deviceMethods: Record<string, string[]> = {
+  "电饭煲": ["蒸煮", "焖饭", "煮粥", "蒸菜"],
+  "微波炉": ["微波加热", "蒸蛋", "烤制"],
+  "空气炸锅": ["空气炸", "烤制", "煎制"],
+  "电磁炉": ["炒制", "煎制", "水煮", "火锅"],
+  "蒸锅": ["清蒸", "水煮", "蒸蛋"],
+  "烤箱": ["烤制", "烘焙", "焗烤"],
+};
 
 const cookingMethods: Record<string, string[]> = {
   "肉类": ["清蒸", "煎制", "水煮", "空气炸锅", "炒制"],
@@ -28,6 +49,12 @@ const cookingMethods: Record<string, string[]> = {
   "水果": ["直接食用", "水果沙拉"],
   "蛋奶": ["水煮", "蒸蛋", "微波", "煎制"],
   "其他": ["直接食用", "简单加工"],
+};
+
+const scenarioEquipment: Record<string, string[]> = {
+  "宿舍": ["微波炉", "电饭煲"],
+  "出租屋": ["电磁炉", "电饭煲", "微波炉", "空气炸锅"],
+  "家庭": ["电磁炉", "电饭煲", "微波炉", "空气炸锅", "蒸锅", "烤箱"],
 };
 
 const recipeSuggestions: Record<string, { main: string; side: string }[]> = {
@@ -61,16 +88,51 @@ const recipeSuggestions: Record<string, { main: string; side: string }[]> = {
   ],
 };
 
+const hungryTimeTips: Record<string, string[]> = {
+  "上午": ["早餐要吃饱", "上午10点可加水果"],
+  "下午": ["午餐要丰富", "下午4点可加坚果"],
+  "晚上": ["晚餐适量", "避免夜宵"],
+  "睡前": ["睡前2小时不进食", "可喝牛奶"],
+};
+
+const availableTimeOptions = [
+  { value: 10, label: "10分钟以内" },
+  { value: 20, label: "10-20分钟" },
+  { value: 30, label: "20-30分钟" },
+  { value: 60, label: "30分钟以上" },
+];
+
+interface MealPlan {
+  day: string;
+  date: string;
+  meals: {
+    type: string;
+    main: string;
+    side: string;
+    method: string;
+    tip?: string;
+  }[];
+}
+
 export default function RecipePage() {
   const { user } = useAuth();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [weeklyPlan, setWeeklyPlan] = useState<MealPlan[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<UserSettings>({
+    scenario: "出租屋",
+    devices: ["电磁炉", "电饭煲"],
+    availableTime: 30,
+    hungryTimes: ["下午", "晚上"],
+    preferredMethods: ["炒制", "蒸煮"],
+  });
 
   useEffect(() => {
     if (user) {
       loadIngredients();
+      loadUserSettings();
     }
   }, [user]);
 
@@ -87,6 +149,39 @@ export default function RecipePage() {
     }
   };
 
+  const loadUserSettings = async () => {
+    if (!user) return;
+    try {
+      const profile = await getUserProfile(user.uid);
+      if (profile?.recipeSettings) {
+        setSettings(profile.recipeSettings as unknown as UserSettings);
+      }
+    } catch (err) {
+      console.error("加载设置失败:", err);
+    }
+  };
+
+  const saveUserSettings = async () => {
+    if (!user) return;
+    try {
+      await updateUserProfile(user.uid, { recipeSettings: settings } as any);
+      setShowSettings(false);
+    } catch (err) {
+      console.error("保存设置失败:", err);
+    }
+  };
+
+  const getAvailableMethods = (): string[] => {
+    const methods = new Set<string>();
+    settings.devices.forEach((device) => {
+      const deviceMethodsList = deviceMethods[device];
+      if (deviceMethodsList) {
+        deviceMethodsList.forEach((m) => methods.add(m));
+      }
+    });
+    return Array.from(methods);
+  };
+
   const getCategoryIngredients = (category: string) => {
     return ingredients
       .filter((i) => i.category === category)
@@ -96,6 +191,7 @@ export default function RecipePage() {
   const generateWeeklyPlan = () => {
     const plan: MealPlan[] = [];
     const today = new Date();
+    const availableMethods = getAvailableMethods();
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
@@ -110,14 +206,19 @@ export default function RecipePage() {
         let mainIngredient = "";
         let method = "";
         let side = "";
+        let tip = "";
 
         if (categoryIngredients.length > 0) {
           const sortedByExpiry = [...categoryIngredients].sort((a, b) => a.remainingDays - b.remainingDays);
           const usedIngredient = sortedByExpiry[0];
           mainIngredient = usedIngredient.name;
           
-          const methods = cookingMethods[category] || ["简单烹饪"];
-          method = methods[Math.floor(Math.random() * methods.length)];
+          const filteredMethods = availableMethods.length > 0 
+            ? availableMethods.filter((m) => cookingMethods[category]?.includes(m))
+            : cookingMethods[category] || ["简单烹饪"];
+          method = filteredMethods.length > 0 
+            ? filteredMethods[Math.floor(Math.random() * filteredMethods.length)]
+            : "简单烹饪";
           
           const suggestions = recipeSuggestions[category];
           if (suggestions && suggestions.length > 0) {
@@ -129,8 +230,12 @@ export default function RecipePage() {
           if (suggestions && suggestions.length > 0) {
             const randomSuggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
             mainIngredient = randomSuggestion.main;
-            const methods = cookingMethods[category] || ["简单烹饪"];
-            method = methods[Math.floor(Math.random() * methods.length)];
+            const filteredMethods = availableMethods.length > 0 
+              ? availableMethods.filter((m) => cookingMethods[category]?.includes(m))
+              : cookingMethods[category] || ["简单烹饪"];
+            method = filteredMethods.length > 0 
+              ? filteredMethods[Math.floor(Math.random() * filteredMethods.length)]
+              : "简单烹饪";
             side = randomSuggestion.side;
           } else {
             mainIngredient = "暂无食材";
@@ -138,11 +243,18 @@ export default function RecipePage() {
           }
         }
 
+        const hour = date.getHours();
+        const timeKey = hour < 10 ? "上午" : hour < 16 ? "下午" : hour < 20 ? "晚上" : "睡前";
+        if (settings.hungryTimes.includes(timeKey) && hungryTimeTips[timeKey]) {
+          tip = hungryTimeTips[timeKey][Math.floor(Math.random() * hungryTimeTips[timeKey].length)];
+        }
+
         return {
           type: mealType,
           main: mainIngredient,
           side: side || "-",
           method: method,
+          tip: tip || undefined,
         };
       });
 
@@ -206,12 +318,188 @@ export default function RecipePage() {
   const expiringIngredients = ingredients.filter((i) => i.remainingDays <= 2);
   const usagePlan = getUsagePlan();
 
+  const handleDeviceChange = (device: string, checked: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      devices: checked
+        ? [...prev.devices, device]
+        : prev.devices.filter((d) => d !== device),
+    }));
+  };
+
+  const handleHungryTimeChange = (time: string, checked: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      hungryTimes: checked
+        ? [...prev.hungryTimes, time]
+        : prev.hungryTimes.filter((t) => t !== time),
+    }));
+  };
+
+  const handleMethodChange = (method: string, checked: boolean) => {
+    setSettings((prev) => ({
+      ...prev,
+      preferredMethods: checked
+        ? [...prev.preferredMethods, method]
+        : prev.preferredMethods.filter((m) => m !== method),
+    }));
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-zinc-900">菜谱生成</h2>
-        <p className="text-zinc-500">根据您的食材库存生成一周健康食谱</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-2xl font-bold text-zinc-900">菜谱生成</h2>
+          <p className="text-zinc-500">根据您的食材库存生成一周健康食谱</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowSettings(!showSettings)}
+          className="flex items-center gap-2"
+        >
+          <Settings className="h-4 w-4" />
+          条件设置
+        </Button>
       </div>
+
+      {showSettings && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flame className="h-5 w-5 text-orange-500" />
+              条件约束设置
+            </CardTitle>
+            <CardDescription>
+              根据您的实际情况设置，生成更贴合的菜谱
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <Label>居住场景</Label>
+                <Select
+                  value={settings.scenario}
+                  onValueChange={(value: "宿舍" | "出租屋" | "家庭") =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      scenario: value,
+                      devices: scenarioEquipment[value],
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="宿舍">宿舍</SelectItem>
+                    <SelectItem value="出租屋">出租屋</SelectItem>
+                    <SelectItem value="家庭">家庭</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-3">
+                <Label>每餐可投入时间</Label>
+                <Select
+                  value={settings.availableTime.toString()}
+                  onValueChange={(value) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      availableTime: parseInt(value),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTimeOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value.toString()}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>可用设备（多选）</Label>
+              <div className="flex flex-wrap gap-3">
+                {Object.keys(deviceMethods).map((device) => (
+                  <div key={device} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`device-${device}`}
+                      checked={settings.devices.includes(device)}
+                      onCheckedChange={(checked) =>
+                        handleDeviceChange(device, checked as boolean)
+                      }
+                    />
+                    <label
+                      htmlFor={`device-${device}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {device}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>易饿时段（多选）</Label>
+              <div className="flex flex-wrap gap-3">
+                {["上午", "下午", "晚上", "睡前"].map((time) => (
+                  <div key={time} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`hungry-${time}`}
+                      checked={settings.hungryTimes.includes(time)}
+                      onCheckedChange={(checked) =>
+                        handleHungryTimeChange(time, checked as boolean)
+                      }
+                    />
+                    <label
+                      htmlFor={`hungry-${time}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {time}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>偏好做法（多选）</Label>
+              <div className="flex flex-wrap gap-3">
+                {["炒制", "蒸煮", "煎制", "水煮", "空气炸锅", "微波"].map((method) => (
+                  <div key={method} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`method-${method}`}
+                      checked={settings.preferredMethods.includes(method)}
+                      onCheckedChange={(checked) =>
+                        handleMethodChange(method, checked as boolean)
+                      }
+                    />
+                    <label
+                      htmlFor={`method-${method}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {method}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button onClick={saveUserSettings} className="bg-green-600 hover:bg-green-700">
+                保存设置
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {expiringIngredients.length > 0 && (
         <Card className="border-amber-300 bg-amber-50">

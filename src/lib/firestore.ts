@@ -22,6 +22,7 @@ export interface UserProfile {
   currentWeight?: number;
   targetWeight?: number;
   targetDate?: Date;
+  recipeSettings?: Record<string, unknown>;
 }
 
 export const createUserProfile = async (userId: string, email: string) => {
