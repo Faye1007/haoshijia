@@ -347,9 +347,9 @@ export default function RecipePage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-900">菜谱生成</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">菜谱生成</h2>
           <p className="text-zinc-500">根据您的食材库存生成一周健康食谱</p>
         </div>
         <Button

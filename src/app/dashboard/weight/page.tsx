@@ -124,7 +124,7 @@ export default function WeightPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-900">体重记录</h2>
+        <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">体重记录</h2>
         <p className="text-zinc-500">记录您的体重变化</p>
       </div>
 

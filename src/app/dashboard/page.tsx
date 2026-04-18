@@ -98,7 +98,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-900">仪表盘</h2>
+        <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">仪表盘</h2>
         <p className="text-zinc-500">欢迎回来 {user?.email}</p>
       </div>
 

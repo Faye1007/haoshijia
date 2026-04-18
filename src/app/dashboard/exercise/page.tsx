@@ -111,7 +111,7 @@ export default function ExercisePage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-900">运动记录</h2>
+        <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">运动记录</h2>
         <p className="text-zinc-500">记录您的每日运动</p>
       </div>
 

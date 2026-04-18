@@ -121,7 +121,7 @@ export default function GoalPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-900">目标设定</h2>
+        <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">目标设定</h2>
         <p className="text-zinc-500">设置您的减重目标</p>
       </div>
 

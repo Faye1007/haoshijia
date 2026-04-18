@@ -175,7 +175,7 @@ export default function MeasurementsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-900">围度记录</h2>
+        <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">围度记录</h2>
         <p className="text-zinc-500">记录您的身体围度变化</p>
       </div>
 
