@@ -394,3 +394,65 @@ export const deletePlan = async (
   const planRef = doc(db, "plans", userId, "weekly", planId);
   await deleteDoc(planRef);
 };
+
+export interface Ingredient {
+  id: string;
+  name: string;
+  category: "肉类" | "主食" | "蔬菜" | "水果" | "蛋奶" | "调味品" | "其他";
+  quantity: number;
+  unit: string;
+  remainingDays: number;
+  userId: string;
+  createdAt: Date;
+}
+
+export const addIngredient = async (
+  userId: string,
+  data: Omit<Ingredient, "id" | "userId" | "createdAt">
+) => {
+  const ingredientRef = collection(db, "ingredients", userId, "items");
+  await addDoc(ingredientRef, {
+    ...data,
+    userId,
+    createdAt: Timestamp.fromDate(new Date()),
+  });
+};
+
+export const getIngredients = async (
+  userId: string
+): Promise<Ingredient[]> => {
+  const ingredientRef = collection(db, "ingredients", userId, "items");
+  const q = query(ingredientRef, orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      name: data.name as string,
+      category: data.category as Ingredient["category"],
+      quantity: data.quantity as number,
+      unit: data.unit as string,
+      remainingDays: data.remainingDays as number,
+      userId: data.userId as string,
+      createdAt: data.createdAt?.toDate() || new Date(),
+    };
+  });
+};
+
+export const updateIngredient = async (
+  userId: string,
+  ingredientId: string,
+  data: Partial<Omit<Ingredient, "id" | "userId" | "createdAt">>
+) => {
+  const ingredientRef = doc(db, "ingredients", userId, "items", ingredientId);
+  await setDoc(ingredientRef, data, { merge: true });
+};
+
+export const deleteIngredient = async (
+  userId: string,
+  ingredientId: string
+) => {
+  const ingredientRef = doc(db, "ingredients", userId, "items", ingredientId);
+  await deleteDoc(ingredientRef);
+};
