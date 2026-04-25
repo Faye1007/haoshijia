@@ -257,7 +257,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <p className="text-sm text-zinc-400">
-              请先在目标设定中设置体重目标
+              请先在体重记录中设置体重目标
             </p>
           )}
         </CardContent>

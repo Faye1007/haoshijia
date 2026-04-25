@@ -14,7 +14,6 @@ const navItems = [
   { href: "/dashboard/food", label: "饮食记录", icon: "Utensils" },
   { href: "/dashboard/exercise", label: "运动记录", icon: "Activity" },
   { href: "/dashboard/review", label: "复盘", icon: "BarChart" },
-  { href: "/dashboard/goal", label: "目标设定", icon: "Target" },
   { href: "/dashboard/inventory", label: "食材库存", icon: "Package" },
   { href: "/dashboard/recipe", label: "菜谱生成", icon: "ChefHat" },
 ];

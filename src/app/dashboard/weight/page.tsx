@@ -1,14 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, getDailyRecords, getWeightHistory } from "@/lib/firestore";
+import {
+  addDailyRecord,
+  getDailyRecords,
+  getLatestDisplayWeight,
+  getUserProfile,
+  getWeightHistory,
+  updateUserProfile,
+  type DisplayWeight,
+  type UserProfile,
+} from "@/lib/firestore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Scale, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Scale, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
 
 interface TodayRecord {
   id: string;
@@ -22,6 +31,18 @@ interface HistoryPoint {
   weight: number;
 }
 
+interface GoalFormData {
+  currentWeight: string;
+  targetWeight: string;
+  targetDate: string;
+}
+
+interface GoalFormErrors {
+  currentWeight?: string;
+  targetWeight?: string;
+  targetDate?: string;
+}
+
 export default function WeightPage() {
   const { user } = useAuth();
   const [weight, setWeight] = useState("");
@@ -30,21 +51,24 @@ export default function WeightPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [goalSaveSuccess, setGoalSaveSuccess] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
   const [viewDays, setViewDays] = useState<number>(7);
   const [error, setError] = useState("");
+  const [goalErrors, setGoalErrors] = useState<GoalFormErrors>({});
+  const [goalFormData, setGoalFormData] = useState<GoalFormData>({
+    currentWeight: "",
+    targetWeight: "",
+    targetDate: "",
+  });
 
   const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    if (!user) return;
-    loadTodayRecords();
-    loadHistory();
-  }, [user, viewDays]);
-
-  const loadTodayRecords = async () => {
+  const loadTodayRecords = useCallback(async () => {
     if (!user) return;
     const records = await getDailyRecords(user.uid, today, "weight");
     const formatted = records.map((r: Record<string, unknown>) => ({
@@ -55,13 +79,42 @@ export default function WeightPage() {
     }));
     setTodayRecords(formatted);
     setIsLoading(false);
-  };
+  }, [today, user]);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!user) return;
     const history = await getWeightHistory(user.uid, viewDays);
     setHistoryData(history);
-  };
+  }, [user, viewDays]);
+
+  const loadGoalData = useCallback(async () => {
+    if (!user) return;
+    const [profileData, weightData] = await Promise.all([
+      getUserProfile(user.uid),
+      getLatestDisplayWeight(user.uid, today),
+    ]);
+
+    setProfile(profileData);
+    setDisplayWeight(weightData);
+
+    if (profileData) {
+      setGoalFormData((prev) => ({
+        ...prev,
+        ...(profileData.currentWeight ? { currentWeight: profileData.currentWeight.toString() } : {}),
+        ...(profileData.targetWeight ? { targetWeight: profileData.targetWeight.toString() } : {}),
+        ...(profileData.targetDate ? { targetDate: profileData.targetDate.toISOString().split("T")[0] } : {}),
+      }));
+    }
+  }, [today, user]);
+
+  const refreshWeightData = useCallback(async () => {
+    await Promise.all([loadTodayRecords(), loadHistory(), loadGoalData()]);
+  }, [loadGoalData, loadHistory, loadTodayRecords]);
+
+  useEffect(() => {
+    if (!user) return;
+    refreshWeightData();
+  }, [refreshWeightData, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,8 +139,7 @@ export default function WeightPage() {
       setRecordTime("");
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      loadTodayRecords();
-      loadHistory();
+      refreshWeightData();
     } catch (err) {
       console.error("保存失败:", err);
       setError("保存失败，请重试");
@@ -96,14 +148,60 @@ export default function WeightPage() {
     }
   };
 
-  const getMorningWeight = () => {
-    const morning = todayRecords.find((r) => r.isMorning);
-    return morning?.weight;
+  const validateGoal = (): boolean => {
+    const newErrors: GoalFormErrors = {};
+    const current = parseFloat(goalFormData.currentWeight);
+    const target = parseFloat(goalFormData.targetWeight);
+
+    if (!goalFormData.currentWeight) {
+      newErrors.currentWeight = "请输入初始体重";
+    } else if (isNaN(current) || current < 30 || current > 300) {
+      newErrors.currentWeight = "体重应在 30-300 kg 之间";
+    }
+
+    if (!goalFormData.targetWeight) {
+      newErrors.targetWeight = "请输入目标体重";
+    } else if (isNaN(target) || target < 30 || target > 300) {
+      newErrors.targetWeight = "目标体重应在 30-300 kg 之间";
+    } else if (!isNaN(current) && target >= current) {
+      newErrors.targetWeight = "目标体重必须小于初始体重";
+    }
+
+    if (!goalFormData.targetDate) {
+      newErrors.targetDate = "请选择目标日期";
+    }
+
+    setGoalErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const getLatestWeight = () => {
-    if (todayRecords.length === 0) return null;
-    return todayRecords[0].weight;
+  const handleGoalSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !validateGoal()) return;
+
+    setIsSaving(true);
+    try {
+      await updateUserProfile(user.uid, {
+        currentWeight: parseFloat(goalFormData.currentWeight),
+        targetWeight: parseFloat(goalFormData.targetWeight),
+        targetDate: new Date(goalFormData.targetDate),
+      });
+      setGoalSaveSuccess(true);
+      setTimeout(() => setGoalSaveSuccess(false), 3000);
+      await loadGoalData();
+    } catch (err) {
+      console.error("保存目标失败:", err);
+      setGoalErrors((prev) => ({ ...prev, targetDate: "保存失败，请重试" }));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleGoalChange = (field: keyof GoalFormData, value: string) => {
+    setGoalFormData((prev) => ({ ...prev, [field]: value }));
+    if (goalErrors[field]) {
+      setGoalErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -119,6 +217,15 @@ export default function WeightPage() {
     date: formatDate(point.date),
     weight: point.weight,
   }));
+
+  const current = parseFloat(goalFormData.currentWeight);
+  const target = parseFloat(goalFormData.targetWeight);
+  const targetDiff = profile?.targetWeight && displayWeight
+    ? displayWeight.weight - profile.targetWeight
+    : null;
+  const estimatedWeeks = !isNaN(current) && !isNaN(target) && current > target
+    ? Math.ceil((current - target) / 0.5)
+    : null;
 
   const weightChange = historyData.length >= 2
     ? (historyData[historyData.length - 1].weight - historyData[0].weight).toFixed(1)
@@ -159,16 +266,39 @@ export default function WeightPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">今日晨重</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-500">今日体重</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {displayWeight ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Scale className="h-5 w-5 text-zinc-400" />
+                  <span className="text-2xl font-bold">{displayWeight.weight} kg</span>
+                </div>
+                <div className="text-xs text-zinc-500">
+                  {displayWeight.source === "today"
+                    ? displayWeight.isMorning ? "今日晨起体重" : "今日最新记录"
+                    : `最近记录：${displayWeight.date}`}
+                </div>
+              </div>
+            ) : (
+              <div className="text-lg text-zinc-400">未记录</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-zinc-500">初始体重</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Scale className="h-5 w-5 text-zinc-400" />
               <span className="text-2xl font-bold">
-                {getMorningWeight() ? `${getMorningWeight()} kg` : "--"}
+                {profile?.currentWeight ? `${profile.currentWeight} kg` : "--"}
               </span>
             </div>
           </CardContent>
@@ -176,13 +306,13 @@ export default function WeightPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">最新体重</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-500">目标体重</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              <Scale className="h-5 w-5 text-zinc-400" />
+              <Target className="h-5 w-5 text-zinc-400" />
               <span className="text-2xl font-bold">
-                {getLatestWeight() ? `${getLatestWeight()} kg` : "--"}
+                {profile?.targetWeight ? `${profile.targetWeight} kg` : "--"}
               </span>
             </div>
           </CardContent>
@@ -190,21 +320,19 @@ export default function WeightPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">
-              {viewDays}天变化
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-500">剩余差距</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
-              {weightChange && parseFloat(weightChange) < 0 ? (
+              {targetDiff !== null && targetDiff < 0 ? (
                 <TrendingDown className="h-5 w-5 text-green-500" />
-              ) : weightChange && parseFloat(weightChange) > 0 ? (
+              ) : targetDiff !== null && targetDiff > 0 ? (
                 <TrendingUp className="h-5 w-5 text-red-500" />
               ) : (
                 <Minus className="h-5 w-5 text-zinc-400" />
               )}
               <span className="text-2xl font-bold">
-                {weightChange ? `${weightChange} kg` : "--"}
+                {targetDiff !== null ? `${targetDiff.toFixed(1)} kg` : "--"}
               </span>
             </div>
           </CardContent>
@@ -307,7 +435,9 @@ export default function WeightPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>体重趋势</CardTitle>
-            <CardDescription>体重变化趋势</CardDescription>
+            <CardDescription>
+              {weightChange ? `${viewDays} 天变化 ${weightChange} kg` : "体重变化趋势"}
+            </CardDescription>
           </div>
           <div className="flex gap-2">
             <Button
@@ -367,6 +497,89 @@ export default function WeightPage() {
           )}
         </CardContent>
       </Card>
+
+      <form id="goal-settings" onSubmit={handleGoalSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>体重目标</CardTitle>
+            <CardDescription>填写初始体重、目标体重和目标日期</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentWeight">初始体重 (kg)</Label>
+                <Input
+                  id="currentWeight"
+                  type="number"
+                  step="0.1"
+                  placeholder="例如: 70"
+                  value={goalFormData.currentWeight}
+                  onChange={(e) => handleGoalChange("currentWeight", e.target.value)}
+                />
+                {goalErrors.currentWeight && (
+                  <p className="text-sm text-red-500">{goalErrors.currentWeight}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetWeight">目标体重 (kg)</Label>
+                <Input
+                  id="targetWeight"
+                  type="number"
+                  step="0.1"
+                  placeholder="例如: 60"
+                  value={goalFormData.targetWeight}
+                  onChange={(e) => handleGoalChange("targetWeight", e.target.value)}
+                />
+                {goalErrors.targetWeight && (
+                  <p className="text-sm text-red-500">{goalErrors.targetWeight}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="targetDate">目标日期</Label>
+                <Input
+                  id="targetDate"
+                  type="date"
+                  min={today}
+                  value={goalFormData.targetDate}
+                  onChange={(e) => handleGoalChange("targetDate", e.target.value)}
+                />
+                {goalErrors.targetDate && (
+                  <p className="text-sm text-red-500">{goalErrors.targetDate}</p>
+                )}
+              </div>
+            </div>
+
+            {estimatedWeeks && goalFormData.targetDate && (
+              <div className="p-4 bg-zinc-50 rounded-lg grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div>
+                  <div className="text-zinc-500">预计周期</div>
+                  <div className="font-medium">{estimatedWeeks} 周</div>
+                </div>
+                <div>
+                  <div className="text-zinc-500">平均每周减重</div>
+                  <div className="font-medium">
+                    {((current - target) / estimatedWeeks).toFixed(1)} kg
+                  </div>
+                </div>
+                <div>
+                  <div className="text-zinc-500">累计需要减</div>
+                  <div className="font-medium">{(current - target).toFixed(1)} kg</div>
+                </div>
+              </div>
+            )}
+
+            <Button type="submit" disabled={isSaving}>
+              {isSaving ? "保存中..." : "保存目标"}
+            </Button>
+
+            {goalSaveSuccess && (
+              <p className="text-sm text-green-600">目标保存成功！</p>
+            )}
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }

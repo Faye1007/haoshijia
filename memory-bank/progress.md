@@ -1,5 +1,30 @@
 # 进度记录
 
+## Step 24: 合并目标设定和体重记录 ✅ (完成日期: 2026-04-25)
+
+### 完成内容
+- 将目标设定整合进体重记录页 `/dashboard/weight`。
+- 体重记录页顶部新增目标摘要，展示今日/最新体重、初始体重、目标体重和剩余差距。
+- 页面中部保留快速记录今日体重，页面下部保留今日记录、体重趋势，并新增目标设置表单。
+- 侧边栏移除独立“目标设定”入口。
+- `/dashboard/goal` 保留为兼容跳转页，自动跳转到 `/dashboard/weight#goal-settings`，避免旧入口 404。
+- 仪表盘空状态文案改为引导用户到体重记录中设置体重目标。
+
+### 验证结果
+- 用户验证测试通过 ✅
+- `npx eslint src/app/dashboard/weight/page.tsx src/app/dashboard/goal/page.tsx src/app/dashboard/layout.tsx src/app/dashboard/page.tsx` 通过 ✅
+- `npx tsc --noEmit` 通过 ✅
+- `npm run lint` 仍存在既有无关错误，涉及 inventory、recipe 等文件，以及部分既有 hook dependency warning。
+- 本次不处理全仓既有 lint cleanup，后续单独安排。
+
+### Git 提交
+- 本次提交包含 Step 24 功能实现与对应文档更新。
+
+### 后续步骤
+- Step 25: 合并食材库存和菜谱生成
+
+---
+
 ## Step 23: 运动记录支持自定义运动量单位 ✅ (完成日期: 2026-04-25)
 
 ### 完成内容
