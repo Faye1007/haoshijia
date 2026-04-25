@@ -26,6 +26,7 @@ haoshijia/
 │   │       ├── measurements/page.tsx # 围度记录
 │   │       ├── food/page.tsx        # 饮食记录、日/周复盘、周计划
 │   │       ├── exercise/page.tsx    # 运动记录
+│   │       ├── review/page.tsx      # 独立复盘页面
 │   │       ├── inventory/page.tsx   # 食材库存
 │   │       └── recipe/page.tsx      # 菜谱生成
 │   ├── components/
@@ -37,6 +38,7 @@ haoshijia/
 │       ├── auth.ts                  # Firebase Auth 工具函数
 │       ├── firebase.ts              # Firebase 初始化
 │       ├── firestore.ts             # Firestore 数据访问函数
+│       ├── review.ts                # 日复盘、周复盘分析逻辑
 │       └── utils.ts                 # cn() 等通用工具
 ├── memory-bank/                     # 产品、架构、进度和修改计划
 ├── components.json                  # shadcn/ui 配置
@@ -61,7 +63,7 @@ haoshijia/
 | 运动记录 | `/dashboard/exercise` | 已实现基础运动记录，单位自定义待补充 |
 | 食材库存 | `/dashboard/inventory` | 已实现食材 CRUD |
 | 菜谱生成 | `/dashboard/recipe` | 已实现基础规则生成和条件设置 |
-| 复盘页 | `/dashboard/review` | 导航已存在，但页面未实现，当前会 404 |
+| 复盘页 | `/dashboard/review` | 已实现独立日复盘和周复盘 |
 
 ## 前端架构
 
@@ -70,6 +72,7 @@ haoshijia/
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
 - 图表使用 Recharts。
 - 图标使用 lucide-react，部分导航图标当前仍为内联 SVG path。
+- 日复盘和周复盘分析逻辑集中在 `src/lib/review.ts`，饮食记录页与独立复盘页共用同一套计算规则。
 
 ## Firebase 集成
 
@@ -187,6 +190,5 @@ ingredients/{userId}/items/{ingredientId}
 
 ## 已知架构问题
 
-- `/dashboard/review` 导航已存在，但页面文件缺失。
 - `getUserProfile` 的返回值需要与 `recipeSettings` 使用场景保持一致。
 - 目标设定和体重记录、食材库存和菜谱生成后续计划合并，详见 `memory-bank/modification-plan.md`。

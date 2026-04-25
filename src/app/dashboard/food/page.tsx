@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, getDailyRecords, getFoodHistory, getWeeklyData, savePlan, getPlans, updatePlan, deletePlan, type Plan } from "@/lib/firestore";
+import { addDailyRecord, getFoodHistory, getWeeklyData, savePlan, getPlans, updatePlan, deletePlan, type Plan } from "@/lib/firestore";
+import { generateDailyReview, generateWeeklyReview, getEmotionLabel, getTriggerLabel, getWeekStartDate, type FoodReviewRecord, type WeeklyReviewData } from "@/lib/review";
 import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Scale, Ruler, Calendar, Target, Zap, FileText, Trash2, Edit2, Save, X } from "lucide-react";
 
 type MealType = "breakfast" | "lunch" | "dinner" | "morningSnack" | "afternoonSnack" | "eveningSnack";
@@ -50,41 +51,7 @@ const emotions = [
   { value: "bored", label: "无聊" },
 ];
 
-interface TodayRecord {
-  id: string;
-  mealType: string;
-  foodDescription: string;
-  portion: number;
-  hungerLevel: number;
-  triggerReason: string;
-  emotion: string;
-  feeling: string;
-  createdAt: Date;
-}
-
-interface WeeklyReviewData {
-  weight: { date: string; weight: number }[];
-  measurements: { date: string; waist: number; hip: number; thigh: number; upperArm: number }[];
-  food: {
-    id: string;
-    mealType: string;
-    foodDescription: string;
-    portion: number;
-    hungerLevel: number;
-    triggerReason: string;
-    emotion: string;
-    feeling: string;
-    createdAt: Date;
-  }[];
-  exercise: {
-    id: string;
-    exerciseType: string;
-    duration: number;
-    calories: number;
-    intensity: string;
-    createdAt: Date;
-  }[];
-}
+type TodayRecord = FoodReviewRecord;
 
 export default function FoodPage() {
   const { user } = useAuth();
@@ -183,56 +150,6 @@ export default function FoodPage() {
     return todayRecords.filter((r) => 
       ["morningSnack", "afternoonSnack", "eveningSnack"].includes(r.mealType)
     ).length;
-  };
-
-  const getTriggerLabel = (value: string) => {
-    const found = triggerReasons.find((r) => r.value === value);
-    return found?.label || value;
-  };
-
-  const getEmotionLabel = (value: string) => {
-    const found = emotions.find((e) => e.value === value);
-    return found?.label || value;
-  };
-
-  const generateDailyReview = () => {
-    const mainMeals = ["breakfast", "lunch", "dinner"];
-    const completedMainMeals = mainMeals.filter(type => 
-      todayRecords.some(r => r.mealType === type)
-    );
-    const executionRate = Math.round((completedMainMeals.length / 3) * 100);
-
-    const triggerReasonsList = ["craving", "stress", "boredom", "habit", "social", "timeConflict"];
-    const triggeredSnacks = todayRecords.filter(r => 
-      triggerReasonsList.includes(r.triggerReason)
-    );
-
-    const triggerCount = triggeredSnacks.length;
-
-    const goodThings: string[] = [];
-    if (executionRate >= 66) goodThings.push("三餐规律");
-    if (todayRecords.every(r => r.hungerLevel <= 3)) goodThings.push("饥饿控制良好");
-    if (todayRecords.some(r => r.feeling?.includes("满足") || r.feeling?.includes("饱"))) goodThings.push("进食满足感不错");
-
-    const improvements: string[] = [];
-    if (triggerCount > 2) improvements.push("减少非饥饿原因的加餐");
-    if (todayRecords.some(r => r.hungerLevel >= 4)) improvements.push("注意餐前饥饿感");
-    if (todayRecords.length < 3) improvements.push("确保每日三餐完整");
-
-    return {
-      executionRate,
-      triggerCount,
-      goodThings: goodThings.length > 0 ? goodThings : ["保持良好饮食习惯"],
-      improvements: improvements.length > 0 ? improvements : ["继续坚持当前饮食计划"]
-    };
-  };
-
-  const getWeekStartDate = (date: Date): string => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    d.setDate(diff);
-    return d.toISOString().split("T")[0];
   };
 
   const loadWeeklyData = async () => {
@@ -398,124 +315,8 @@ export default function FoodPage() {
     }
   };
 
-  const generateWeeklyReview = () => {
-    if (!weeklyData) return null;
-
-    const weightChanges = weeklyData.weight;
-    let weightChange = 0;
-    if (weightChanges.length >= 2) {
-      const firstWeight = weightChanges[0].weight;
-      const lastWeight = weightChanges[weightChanges.length - 1].weight;
-      weightChange = lastWeight - firstWeight;
-    }
-
-    const avgWeight = weightChanges.length > 0
-      ? weightChanges.reduce((sum, w) => sum + w.weight, 0) / weightChanges.length
-      : 0;
-
-    const measurementChanges = weeklyData.measurements;
-    let waistChange = 0;
-    let hipChange = 0;
-    if (measurementChanges.length >= 2) {
-      waistChange = measurementChanges[measurementChanges.length - 1].waist - measurementChanges[0].waist;
-      hipChange = measurementChanges[measurementChanges.length - 1].hip - measurementChanges[0].hip;
-    }
-
-    const foodData = weeklyData.food;
-    const mainMeals = ["breakfast", "lunch", "dinner"];
-    const daysWithMainMeals = new Set<string>();
-    const completedMealsPerDay: Record<string, number> = {};
-
-    foodData.forEach((r) => {
-      const date = new Date(r.createdAt).toISOString().split("T")[0];
-      daysWithMainMeals.add(date);
-      if (mainMeals.includes(r.mealType)) {
-        completedMealsPerDay[date] = (completedMealsPerDay[date] || 0) + 1;
-      }
-    });
-
-    const executionRate = Object.values(completedMealsPerDay).filter((v) => v >= 3).length;
-    const totalDays = daysWithMainMeals.size || 1;
-    const executionPercent = Math.round((executionRate / totalDays) * 100);
-
-    const snackTypes = ["morningSnack", "afternoonSnack", "eveningSnack"];
-    const snackRecords = foodData.filter((r) => snackTypes.includes(r.mealType));
-    const triggerReasonsList = ["craving", "stress", "boredom", "habit", "social", "timeConflict"];
-    const triggeredSnacks = snackRecords.filter((r) => triggerReasonsList.includes(r.triggerReason));
-    const triggerCount = triggeredSnacks.length;
-
-    const emotionFoodMap: Record<string, number[]> = {};
-    foodData.forEach((r) => {
-      if (r.emotion && r.emotion !== "unknown") {
-        if (!emotionFoodMap[r.emotion]) {
-          emotionFoodMap[r.emotion] = [];
-        }
-        emotionFoodMap[r.emotion].push(r.hungerLevel);
-      }
-    });
-
-    const emotionCorrelation: { emotion: string; avgHunger: number; count: number }[] = [];
-    Object.entries(emotionFoodMap).forEach(([emotion, hungerLevels]) => {
-      emotionCorrelation.push({
-        emotion,
-        avgHunger: hungerLevels.reduce((a, b) => a + b, 0) / hungerLevels.length,
-        count: hungerLevels.length,
-      });
-    });
-    emotionCorrelation.sort((a, b) => b.avgHunger - a.avgHunger);
-
-    const triggerFoodMap: Record<string, number> = {};
-    snackRecords.forEach((r) => {
-      if (r.triggerReason && r.triggerReason !== "unknown") {
-        triggerFoodMap[r.triggerReason] = (triggerFoodMap[r.triggerReason] || 0) + 1;
-      }
-    });
-
-    const triggerRanking: { reason: string; count: number }[] = [];
-    Object.entries(triggerFoodMap).forEach(([reason, count]) => {
-      triggerRanking.push({ reason, count });
-    });
-    triggerRanking.sort((a, b) => b.count - a.count);
-
-    const goodThings: string[] = [];
-    if (weightChange < 0) goodThings.push("体重有所下降");
-    if (executionPercent >= 60) goodThings.push("三餐规律性改善");
-    if (triggerCount <= 3) goodThings.push("触发性进食控制良好");
-
-    const strategies: string[] = [];
-    if (triggerCount > 3) {
-      strategies.push("识别高风险时段，提前准备健康零食");
-    }
-    if (emotionCorrelation.length > 0) {
-      strategies.push(`注意${emotionCorrelation[0].emotion}情绪时的饮食冲动`);
-    }
-    if (triggerRanking.length > 0) {
-      const topTrigger = triggerRanking[0];
-      if (topTrigger.count > 2) {
-        strategies.push(`避免${getTriggerLabel(topTrigger.reason)}场景`);
-      }
-    }
-    if (strategies.length < 3) {
-      strategies.push("继续记录饮食数据");
-      strategies.push("保持当前良好的饮食习惯");
-    }
-
-    return {
-      weightChange,
-      avgWeight,
-      waistChange,
-      hipChange,
-      executionPercent,
-      triggerCount,
-      emotionCorrelation: emotionCorrelation.slice(0, 3),
-      triggerRanking: triggerRanking.slice(0, 3),
-      goodThings: goodThings.length > 0 ? goodThings : ["保持良好饮食习惯"],
-      strategies: strategies.slice(0, 3),
-    };
-  };
-
-  const weeklyReview = weeklyData && weeklyData.food.length > 0 ? generateWeeklyReview() : null;
-  const review = todayRecords.length > 0 ? generateDailyReview() : null;
+  const weeklyReview = weeklyData && weeklyData.food.length > 0 ? generateWeeklyReview(weeklyData) : null;
+  const review = todayRecords.length > 0 ? generateDailyReview(todayRecords) : null;
 
   const totalRecords = todayRecords.length;
 
