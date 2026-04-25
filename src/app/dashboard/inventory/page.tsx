@@ -29,9 +29,12 @@ import {
   Clock,
   Edit2,
   Flame,
+  Grid3X3,
   Leaf,
   Package,
+  Printer,
   Settings,
+  Table2,
   Trash2,
 } from "lucide-react";
 
@@ -54,6 +57,8 @@ interface MealPlan {
     tip?: string;
   }[];
 }
+
+type RecipeView = "table" | "grid" | "calendar";
 
 const categories = [
   { value: "肉类", label: "肉类", color: "bg-red-100 text-red-700" },
@@ -148,6 +153,7 @@ export default function InventoryPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [weeklyPlan, setWeeklyPlan] = useState<MealPlan[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [recipeView, setRecipeView] = useState<RecipeView>("table");
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
 
   const [name, setName] = useState("");
@@ -436,14 +442,153 @@ export default function InventoryPage() {
   const expiringItems = ingredients.filter((item) => item.remainingDays <= 2);
   const usagePlan = getUsagePlan();
 
+  const getMeal = (dayPlan: MealPlan, mealType: string) => {
+    return dayPlan.meals.find((meal) => meal.type === mealType);
+  };
+
+  const getMealText = (dayPlan: MealPlan, mealType: string) => {
+    const meal = getMeal(dayPlan, mealType);
+    if (!meal) return "-";
+    return meal.side !== "-" ? `${meal.main} + ${meal.side}` : meal.main;
+  };
+
+  const handlePrint = () => {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
+  };
+
+  const recipeDateRange = weeklyPlan.length > 0
+    ? `${weeklyPlan[0].day} - ${weeklyPlan[weeklyPlan.length - 1].day}`
+    : "";
+
+  const renderMealDetail = (dayPlan: MealPlan, mealType: string, compact = false) => {
+    const meal = getMeal(dayPlan, mealType);
+    if (!meal) return <span className="text-zinc-400">-</span>;
+
+    return (
+      <div className={compact ? "space-y-1" : "space-y-1.5"}>
+        <div className="font-medium leading-snug text-zinc-900">{getMealText(dayPlan, mealType)}</div>
+        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+          <Clock className="h-3 w-3 shrink-0" />
+          <span>{meal.method}</span>
+        </div>
+        {meal.tip && <div className="text-xs leading-snug text-amber-600">{meal.tip}</div>}
+      </div>
+    );
+  };
+
+  const renderRecipeTableView = () => (
+    <Card className="recipe-print-card">
+      <CardContent className="pt-6">
+        <div className="recipe-table-desktop hidden overflow-hidden rounded-lg border border-zinc-200 md:block">
+          <table className="w-full table-fixed border-collapse text-sm">
+            <thead className="bg-zinc-50 text-left text-xs font-medium text-zinc-500">
+              <tr>
+                <th className="w-28 px-3 py-3">日期</th>
+                {mealTypes.map((mealType) => (
+                  <th key={mealType} className="px-3 py-3">
+                    {mealType}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100">
+              {weeklyPlan.map((dayPlan) => (
+                <tr key={dayPlan.date} className="align-top">
+                  <td className="bg-zinc-50 px-3 py-3 font-medium text-zinc-900">{dayPlan.day}</td>
+                  {mealTypes.map((mealType) => (
+                    <td key={`${dayPlan.date}-${mealType}`} className="px-3 py-3">
+                      {renderMealDetail(dayPlan, mealType, true)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="recipe-table-mobile space-y-3 md:hidden">
+          {weeklyPlan.map((dayPlan) => (
+            <div key={dayPlan.date} className="rounded-lg border border-zinc-200 bg-white p-3">
+              <div className="mb-3 flex items-center gap-2 font-medium text-zinc-900">
+                <Calendar className="h-4 w-4 text-blue-600" />
+                {dayPlan.day}
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {mealTypes.map((mealType) => (
+                  <div key={`${dayPlan.date}-${mealType}`} className="rounded-md bg-zinc-50 p-3">
+                    <div className="mb-1 text-xs font-medium text-zinc-500">{mealType}</div>
+                    {renderMealDetail(dayPlan, mealType, true)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderRecipeGridView = () => (
+    <Card className="recipe-print-card">
+      <CardContent className="pt-6">
+        <div className="recipe-grid-layout grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {weeklyPlan.flatMap((dayPlan) =>
+            mealTypes.map((mealType) => (
+              <div
+                key={`${dayPlan.date}-${mealType}`}
+                className="min-h-28 rounded-lg border border-zinc-200 bg-zinc-50 p-3"
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-zinc-500">{dayPlan.day}</span>
+                  <span className="rounded bg-white px-2 py-0.5 text-xs font-medium text-zinc-700">
+                    {mealType}
+                  </span>
+                </div>
+                {renderMealDetail(dayPlan, mealType, true)}
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderRecipeCalendarView = () => (
+    <Card className="recipe-print-card">
+      <CardContent className="pt-6">
+        <div className="overflow-x-auto">
+          <div className="recipe-calendar-layout grid min-w-[720px] grid-cols-7 overflow-hidden rounded-lg border border-zinc-200">
+            {weeklyPlan.map((dayPlan) => (
+              <div key={dayPlan.date} className="border-r border-zinc-200 last:border-r-0">
+                <div className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-sm font-medium text-zinc-900">
+                  {dayPlan.day}
+                </div>
+                <div className="divide-y divide-zinc-100">
+                  {mealTypes.map((mealType) => (
+                    <div key={`${dayPlan.date}-${mealType}`} className="min-h-32 p-3">
+                      <div className="mb-2 text-xs font-medium text-zinc-500">{mealType}</div>
+                      {renderMealDetail(dayPlan, mealType, true)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div>
+    <div className="inventory-page max-w-5xl mx-auto space-y-6">
+      <div className="inventory-page-header">
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">食材与菜谱</h2>
         <p className="text-zinc-500">管理食材库存，并基于最新库存生成一周菜谱</p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="inventory-tabs w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="inventory">食材库存</TabsTrigger>
           <TabsTrigger value="recipe">一周菜谱</TabsTrigger>
@@ -451,7 +596,7 @@ export default function InventoryPage() {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-6">
-          <Card>
+          <Card className="no-print">
             <CardHeader>
               <CardTitle>添加食材</CardTitle>
               <CardDescription>添加新的食材到库存</CardDescription>
@@ -627,7 +772,7 @@ export default function InventoryPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="recipe" className="space-y-6">
+        <TabsContent value="recipe" className="recipe-tab-content space-y-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -663,7 +808,7 @@ export default function InventoryPage() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-center">
+          <div className="no-print flex justify-center">
             <Button
               onClick={generateWeeklyPlan}
               disabled={isLoading || ingredients.length === 0}
@@ -676,52 +821,83 @@ export default function InventoryPage() {
           </div>
 
           {hasGenerated && weeklyPlan.length > 0 && (
-            <Tabs defaultValue="menu" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="menu" className="recipe-results-tabs w-full">
+              <TabsList className="no-print grid w-full grid-cols-2">
                 <TabsTrigger value="menu">一周菜单</TabsTrigger>
                 <TabsTrigger value="usage">食材使用计划</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="menu" className="space-y-4">
-                {weeklyPlan.map((dayPlan) => (
-                  <Card key={dayPlan.date}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                        {dayPlan.day}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {dayPlan.meals.map((meal) => (
-                          <div key={`${dayPlan.date}-${meal.type}`} className="p-4 bg-zinc-50 rounded-lg border border-zinc-100">
-                            <div className="font-medium text-zinc-700 mb-2">{meal.type}</div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-start gap-2">
-                                <span className="text-zinc-500">主菜:</span>
-                                <span className="font-medium text-zinc-900">{meal.main}</span>
-                              </div>
-                              {meal.side !== "-" && (
-                                <div className="flex items-start gap-2">
-                                  <span className="text-zinc-500">配菜:</span>
-                                  <span className="text-zinc-700">{meal.side}</span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3 text-zinc-400" />
-                                <span className="text-zinc-500">{meal.method}</span>
-                              </div>
-                              {meal.tip && <div className="text-xs text-amber-600">{meal.tip}</div>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <TabsContent value="menu" className="recipe-menu-content space-y-4">
+                <div className="no-print flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-zinc-900">一周三餐安排</h3>
+                    <p className="text-sm text-zinc-500">切换不同视图查看同一份菜谱</p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="grid grid-cols-3 rounded-lg bg-zinc-100 p-1">
+                      <Button
+                        type="button"
+                        variant={recipeView === "table" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRecipeView("table")}
+                        className="gap-1.5"
+                      >
+                        <Table2 className="h-4 w-4" />
+                        表格
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={recipeView === "grid" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRecipeView("grid")}
+                        className="gap-1.5"
+                      >
+                        <Grid3X3 className="h-4 w-4" />
+                        九宫格
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={recipeView === "calendar" ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setRecipeView("calendar")}
+                        className="gap-1.5"
+                      >
+                        <Calendar className="h-4 w-4" />
+                        日历
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePrint}
+                      className="gap-1.5"
+                    >
+                      <Printer className="h-4 w-4" />
+                      导出 / 保存 PDF
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="recipe-print-area recipe-print-page space-y-4" data-recipe-view={recipeView}>
+                  <div className="print-only recipe-print-header">
+                    <div>
+                      <h3 className="text-lg font-semibold text-zinc-900">好食家一周菜谱</h3>
+                      <p className="text-sm text-zinc-500">{recipeDateRange}</p>
+                    </div>
+                    <div className="text-sm text-zinc-500">
+                      当前视图：
+                      {recipeView === "table" ? "表格" : recipeView === "grid" ? "九宫格" : "日历"}
+                    </div>
+                  </div>
+
+                  {recipeView === "table" && renderRecipeTableView()}
+                  {recipeView === "grid" && renderRecipeGridView()}
+                  {recipeView === "calendar" && renderRecipeCalendarView()}
+                </div>
               </TabsContent>
 
-              <TabsContent value="usage" className="space-y-4">
+              <TabsContent value="usage" className="no-print space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle>食材消耗节奏规划</CardTitle>

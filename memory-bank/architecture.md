@@ -208,10 +208,20 @@ ingredients/{userId}/items/{ingredientId}
 - 菜谱生成与食材库存位于同一页面 `/dashboard/inventory`。
 - 页面 Tab 包括：食材库存、一周菜谱、条件设置。
 - 添加、编辑、删除食材后会刷新同页 `ingredients` 状态，生成一周菜谱时直接读取最新库存。
+- 生成后的一周菜单使用同一份 `weeklyPlan` 状态驱动三种视图：
+  - 表格视图：桌面端按日期、早餐、午餐、晚餐展示，移动端使用紧凑日期卡片。
+  - 九宫格视图：将 7 天 × 3 餐拆成紧凑餐次块。
+  - 日历视图：横向一周日历布局，保留每餐主菜、配菜、做法和提示。
+- 菜谱导出复用浏览器打印能力：菜单区提供“导出 / 保存 PDF”入口，打印内容跟随当前菜单视图，且仅包含当前一周菜单。
+- 打印样式集中定义在 `src/app/globals.css`：
+  - 通过 `dashboard-*` 类隐藏后台导航、顶部栏和移动端菜单按钮。
+  - 通过 `no-print` 和 `print-only` 控制页面内按钮、表单和打印头信息显示。
+  - 使用 `inventory-*`、`recipe-*` 结构类对白名单放行打印范围，只保留菜单打印容器。
+  - 使用 `recipe-print-*` 类压缩表格、九宫格、日历三种视图，适配 A4 横向一页纸输出。
 - 条件设置保存在 `users/{userId}.recipeSettings`，包括居住场景、设备、每餐可投入时间、易饿时段和偏好做法。
 - 旧 `/dashboard/recipe` 路由保留为兼容跳转页，自动跳转到 `/dashboard/inventory?tab=recipe`。
 
 ## 已知架构问题
 
 - `getUserProfile` 的返回值需要与 `recipeSettings` 使用场景保持一致。
-- 菜谱生成展示压缩、导出和搭配规则优化后续计划实施，详见 `memory-bank/modification-plan.md`。
+- 菜谱搭配规则优化后续计划实施，详见 `memory-bank/modification-plan.md`。

@@ -29,3 +29,143 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  html,
+  body {
+    background: #fff;
+  }
+
+  body {
+    color: #111827;
+  }
+
+  .dashboard-mobile-toggle,
+  .dashboard-sidebar,
+  .dashboard-header,
+  .no-print {
+    display: none !important;
+  }
+
+  .dashboard-shell,
+  .dashboard-content,
+  .dashboard-main {
+    display: block !important;
+    min-height: auto !important;
+  }
+
+  .dashboard-main {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  .inventory-page {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .inventory-page > :not(.inventory-tabs) {
+    display: none !important;
+  }
+
+  .inventory-tabs > :not(.recipe-tab-content) {
+    display: none !important;
+  }
+
+  .recipe-tab-content > :not(.recipe-results-tabs) {
+    display: none !important;
+  }
+
+  .recipe-results-tabs > :not(.recipe-menu-content) {
+    display: none !important;
+  }
+
+  .recipe-menu-content > :not(.recipe-print-area) {
+    display: none !important;
+  }
+
+  .recipe-tab-content,
+  .recipe-results-tabs,
+  .recipe-menu-content,
+  .recipe-print-area {
+    display: block !important;
+  }
+
+  .recipe-print-page {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .print-only {
+    display: flex !important;
+  }
+
+  .recipe-print-header {
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .recipe-print-card {
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .recipe-print-card > div {
+    padding: 0 !important;
+  }
+
+  .recipe-table-desktop {
+    display: block !important;
+  }
+
+  .recipe-table-mobile {
+    display: none !important;
+  }
+
+  .recipe-table-desktop table {
+    font-size: 11px;
+  }
+
+  .recipe-table-desktop th,
+  .recipe-table-desktop td {
+    padding: 8px !important;
+  }
+
+  .recipe-grid-layout {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .recipe-grid-layout > div,
+  .recipe-calendar-layout > div {
+    break-inside: avoid;
+  }
+
+  .recipe-calendar-layout {
+    min-width: 0 !important;
+  }
+
+  .recipe-calendar-layout > div > div:first-child {
+    font-size: 12px;
+  }
+
+  .recipe-calendar-layout > div > div:last-child > div {
+    min-height: 88px !important;
+    padding: 8px !important;
+  }
+}

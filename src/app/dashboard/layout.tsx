@@ -78,11 +78,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="dashboard-shell min-h-screen flex">
       {/* Mobile menu button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden p-2 bg-white rounded-md shadow-md"
+        className="dashboard-mobile-toggle fixed top-4 left-4 z-50 lg:hidden p-2 bg-white rounded-md shadow-md"
       >
         {sidebarOpen ? (
           <X className="h-5 w-5" />
@@ -92,7 +92,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </button>
 
       {/* Sidebar - desktop */}
-      <aside className="hidden lg:flex w-56 bg-white border-r border-zinc-200 flex-col fixed h-full">
+      <aside className="dashboard-sidebar hidden lg:flex w-56 bg-white border-r border-zinc-200 flex-col fixed h-full">
         <div className="p-4 border-b border-zinc-200">
           <h1 className="text-xl font-bold text-zinc-800">好食家</h1>
         </div>
@@ -140,7 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <aside className="fixed inset-0 z-40 lg:hidden">
+        <aside className="dashboard-sidebar fixed inset-0 z-40 lg:hidden">
           <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setSidebarOpen(false)}
@@ -194,8 +194,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </aside>
       )}
 
-      <div className="flex-1 flex flex-col lg:ml-56">
-        <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-end px-4 md:px-6">
+      <div className="dashboard-content flex-1 flex flex-col lg:ml-56">
+        <header className="dashboard-header h-14 bg-white border-b border-zinc-200 flex items-center justify-end px-4 md:px-6">
           <div className="flex items-center gap-3">
             <span className="text-sm text-zinc-600 hidden sm:inline">{activeUser.email}</span>
             <div className="h-8 w-8 rounded-full bg-zinc-200 flex items-center justify-center">
@@ -205,7 +205,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
-        <main className="flex-1 bg-zinc-50 p-4 md:p-6">{children}</main>
+        <main className="dashboard-main flex-1 bg-zinc-50 p-4 md:p-6">{children}</main>
       </div>
     </div>
   );
