@@ -61,8 +61,8 @@ haoshijia/
 | 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、移动端紧凑摘要和今日记录删除 |
 | 饮食记录 | `/dashboard/food` | 已实现饮食记录、日复盘、周复盘、周计划 |
 | 运动记录 | `/dashboard/exercise` | 已实现运动记录、自定义运动量单位和旧分钟数据兼容 |
-| 食材库存 | `/dashboard/inventory` | 已实现食材 CRUD |
-| 菜谱生成 | `/dashboard/recipe` | 已实现基础规则生成和条件设置 |
+| 食材与菜谱 | `/dashboard/inventory` | 已实现食材 CRUD、一周菜谱生成和条件设置 |
+| 菜谱生成兼容跳转 | `/dashboard/recipe` | 兼容旧入口，自动跳转到 `/dashboard/inventory?tab=recipe` |
 | 复盘页 | `/dashboard/review` | 已实现独立日复盘和周复盘 |
 
 ## 前端架构
@@ -70,6 +70,7 @@ haoshijia/
 - 使用 Next.js App Router，页面主要为 Client Component。
 - 登录状态由 `AuthProvider` 提供，`dashboard/layout.tsx` 根据 Firebase Auth 状态保护后台页面；登录/注册成功后直接进入仪表盘，dashboard 守卫使用 `AuthContext` 用户并兜底读取 `auth.currentUser`，避免认证状态同步期间误跳回登录页。
 - 侧边栏导航已将目标设定合并到体重记录入口，体重记录页同时承担体重记录、趋势查看和目标设置。
+- 侧边栏导航已将食材库存和菜谱生成合并为“食材与菜谱”入口，页面内使用 Tab 组织食材库存、一周菜谱和条件设置。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
 - 图表使用 Recharts。
 - 图标使用 lucide-react，部分导航图标当前仍为内联 SVG path。
@@ -202,7 +203,15 @@ ingredients/{userId}/items/{ingredientId}
 - `updateIngredient`
 - `deleteIngredient`
 
+菜谱生成流程：
+
+- 菜谱生成与食材库存位于同一页面 `/dashboard/inventory`。
+- 页面 Tab 包括：食材库存、一周菜谱、条件设置。
+- 添加、编辑、删除食材后会刷新同页 `ingredients` 状态，生成一周菜谱时直接读取最新库存。
+- 条件设置保存在 `users/{userId}.recipeSettings`，包括居住场景、设备、每餐可投入时间、易饿时段和偏好做法。
+- 旧 `/dashboard/recipe` 路由保留为兼容跳转页，自动跳转到 `/dashboard/inventory?tab=recipe`。
+
 ## 已知架构问题
 
 - `getUserProfile` 的返回值需要与 `recipeSettings` 使用场景保持一致。
-- 目标设定和体重记录、食材库存和菜谱生成后续计划合并，详见 `memory-bank/modification-plan.md`。
+- 菜谱生成展示压缩、导出和搭配规则优化后续计划实施，详见 `memory-bank/modification-plan.md`。

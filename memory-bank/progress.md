@@ -1,5 +1,32 @@
 # 进度记录
 
+## Step 25: 合并食材库存和菜谱生成 ✅ (完成日期: 2026-04-25)
+
+### 完成内容
+- 将食材库存和菜谱生成合并为 `/dashboard/inventory` 的“食材与菜谱”页面。
+- 页面内使用 Tab 组织：
+  - 食材库存
+  - 一周菜谱
+  - 条件设置
+- 添加、编辑、删除食材后，同页菜谱生成直接读取最新库存状态。
+- 侧边栏移除独立“菜谱生成”入口，保留一个“食材与菜谱”入口。
+- `/dashboard/recipe` 保留为兼容跳转页，自动跳转到 `/dashboard/inventory?tab=recipe`，避免旧入口 404。
+- 原库存页和菜谱页的 lint error 已随合并消除。
+
+### 验证结果
+- 用户验证测试通过 ✅
+- `npx eslint src/app/dashboard/inventory/page.tsx src/app/dashboard/recipe/page.tsx src/app/dashboard/layout.tsx` 通过 ✅
+- `npx tsc --noEmit` 通过 ✅
+- `npm run lint` 无 error，仅剩 5 个既有 warning。
+
+### Git 提交
+- 本次提交包含 Step 25 功能实现与对应文档更新。
+
+### 后续步骤
+- Step 26: 菜谱展示压缩为表格/日历视图
+
+---
+
 ## Step 24: 合并目标设定和体重记录 ✅ (完成日期: 2026-04-25)
 
 ### 完成内容

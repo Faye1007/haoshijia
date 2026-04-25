@@ -14,8 +14,7 @@ const navItems = [
   { href: "/dashboard/food", label: "饮食记录", icon: "Utensils" },
   { href: "/dashboard/exercise", label: "运动记录", icon: "Activity" },
   { href: "/dashboard/review", label: "复盘", icon: "BarChart" },
-  { href: "/dashboard/inventory", label: "食材库存", icon: "Package" },
-  { href: "/dashboard/recipe", label: "菜谱生成", icon: "ChefHat" },
+  { href: "/dashboard/inventory", label: "食材与菜谱", icon: "Package" },
 ];
 
 const icons: Record<string, string> = {
@@ -26,7 +25,6 @@ const icons: Record<string, string> = {
   Activity: "M22 12h-4l-3 9L9 3l-3 9H2",
   BarChart: "M18 20V10M12 20V4M6 20v-6",
   Target: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20M12 12m-1 0a1 1 0 1 0 2 0 1 1 0 1 0-2 0M12 12m-7 0a7 7 0 1 0 14 0 7 7 0 0 0-14 0",
-  ChefHat: "M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.71.44L12 7.5l2.88-1.06A5.11 5.11 0 0 1 16.59 6A4 4 0 0 1 18 13.87V21H6zM12 3a2 2 0 0 1 2 2c0 1.5-1 2.5-2 2.5s-2-1-2-2.5a2 2 0 0 1 2-2z",
   Package: "M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
 };
 

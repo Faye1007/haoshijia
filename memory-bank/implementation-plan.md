@@ -423,7 +423,7 @@
 
 ---
 
-### Step 25: 合并食材库存和菜谱生成
+### Step 25: 合并食材库存和菜谱生成 ✅
 **任务目标**：
 - 将强依赖食材库存的菜谱生成能力合并到同一页面，减少来回切换。
 - 让菜谱生成即时读取最新库存。
@@ -446,6 +446,15 @@
 - 完成后更新 `memory-bank/progress.md`。
 - 更新 `memory-bank/architecture.md` 中页面结构和菜谱生成流程说明。
 - 必要时同步更新 `memory-bank/modification-plan.md` 的任务状态。
+
+**完成说明**：
+- 已完成，完成日期：2026-04-25。
+- 用户验证测试通过。
+- `/dashboard/inventory` 合并为“食材与菜谱”页面，使用 Tab 组织食材库存、一周菜谱和条件设置。
+- 侧边栏保留一个“食材与菜谱”入口，移除独立菜谱生成入口。
+- 添加、编辑、删除食材后，同页菜谱生成读取最新库存状态。
+- 旧 `/dashboard/recipe` 路由保留为兼容跳转页，自动跳转到 `/dashboard/inventory?tab=recipe`，避免导航断点。
+- 合并后全量 `npm run lint` 无 error，仅剩既有 warning。
 
 ---
 
