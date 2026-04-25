@@ -79,6 +79,16 @@ export const getDailyRecords = async (
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 };
 
+export const deleteDailyRecord = async (
+  userId: string,
+  date: string,
+  recordType: string,
+  recordId: string
+) => {
+  const recordRef = doc(db, "records", userId, "daily", date, recordType, recordId);
+  await deleteDoc(recordRef);
+};
+
 export interface WeightRecord {
   id: string;
   weight: number;

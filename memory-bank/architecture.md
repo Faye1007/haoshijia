@@ -58,7 +58,7 @@ haoshijia/
 | 仪表盘 | `/dashboard` | 已实现，今日体重已从体重记录子集合同步 |
 | 目标设定 | `/dashboard/goal` | 已实现 |
 | 体重记录 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图 |
-| 围度记录 | `/dashboard/measurements` | 已实现记录和趋势图，删除能力待补充 |
+| 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、移动端紧凑摘要和今日记录删除 |
 | 饮食记录 | `/dashboard/food` | 已实现饮食记录、日复盘、周复盘、周计划 |
 | 运动记录 | `/dashboard/exercise` | 已实现基础运动记录，单位自定义待补充 |
 | 食材库存 | `/dashboard/inventory` | 已实现食材 CRUD |
@@ -143,6 +143,7 @@ records/{userId}/daily/{date}/exercise/{recordId}
 
 - `addDailyRecord`
 - `getDailyRecords`
+- `deleteDailyRecord`
 - `getLatestDisplayWeight`
 - `getWeightHistory`
 - `getMeasurementHistory`

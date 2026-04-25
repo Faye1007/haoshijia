@@ -5,10 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, getDailyRecords, getMeasurementHistory } from "@/lib/firestore";
+import { addDailyRecord, deleteDailyRecord, getDailyRecords, getMeasurementHistory } from "@/lib/firestore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Ruler, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { Ruler, TrendingDown, TrendingUp, Minus, Trash2 } from "lucide-react";
 
 interface TodayRecord {
   id: string;
@@ -54,6 +62,8 @@ export default function MeasurementsPage() {
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
   const [viewDays, setViewDays] = useState<number>(7);
+  const [recordToDelete, setRecordToDelete] = useState<TodayRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
@@ -74,7 +84,7 @@ export default function MeasurementsPage() {
       hip: r.hip as number,
       thigh: r.thigh as number,
       upperArm: r.upperArm as number,
-      createdAt: (r.createdAt as { toDate: () => Date }).toDate(),
+      createdAt: (r.createdAt as { toDate?: () => Date })?.toDate?.() || new Date(),
     }));
     setTodayRecords(formatted);
     setIsLoading(false);
@@ -136,6 +146,24 @@ export default function MeasurementsPage() {
     }
   };
 
+  const handleDeleteConfirm = async () => {
+    if (!user || !recordToDelete) return;
+
+    setIsDeleting(true);
+    setError("");
+
+    try {
+      await deleteDailyRecord(user.uid, today, "measurement", recordToDelete.id);
+      setRecordToDelete(null);
+      await Promise.all([loadTodayRecords(), loadHistory()]);
+    } catch (err) {
+      console.error("删除失败:", err);
+      setError("删除失败，请重试");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getLatestRecord = () => {
     if (todayRecords.length === 0) return null;
     return todayRecords[0];
@@ -156,6 +184,18 @@ export default function MeasurementsPage() {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return `${date.getMonth() + 1}/${date.getDate()}`;
+  };
+
+  const getRecordSummary = (record: TodayRecord | null) => {
+    if (!record) return "";
+
+    return Object.entries(measurementLabels)
+      .map(([key, label]) => {
+        const value = record[key as keyof TodayRecord];
+        return typeof value === "number" && value > 0 ? `${label} ${value} cm` : null;
+      })
+      .filter(Boolean)
+      .join("，");
   };
 
   const chartData = historyData.map((point) => ({
@@ -211,18 +251,18 @@ export default function MeasurementsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         {["waist", "hip", "thigh", "upperArm"].map((key) => (
           <Card key={key}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-500">
+            <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-zinc-500">
                 {measurementLabels[key]}
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
               <div className="flex items-center gap-2">
-                <Ruler className="h-5 w-5 text-zinc-400" />
-                <span className="text-2xl font-bold">
+                <Ruler className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-400 shrink-0" />
+                <span className="text-lg sm:text-2xl font-bold">
                   {latestRecord
                     ? `${latestRecord[key as keyof typeof latestRecord]} cm`
                     : "--"}
@@ -234,15 +274,15 @@ export default function MeasurementsPage() {
 
         {["waist", "hip", "thigh", "upperArm"].map((key) => (
           <Card key={`${key}-change`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-500">
-                {measurementLabels[key]} ({viewDays}天变化)
+            <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium text-zinc-500">
+                {measurementLabels[key]}变化
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
               <div className="flex items-center gap-2">
                 {renderChangeIcon(getMeasurementChange(key))}
-                <span className="text-2xl font-bold">
+                <span className="text-lg sm:text-2xl font-bold">
                   {getMeasurementChange(key)
                     ? `${getMeasurementChange(key)} cm`
                     : "--"}
@@ -330,16 +370,28 @@ export default function MeasurementsPage() {
             <CardDescription>{today} 的围度记录</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {todayRecords.map((record) => (
                 <div key={record.id} className="p-3 bg-zinc-50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Ruler className="h-4 w-4 text-zinc-400" />
-                    <span className="text-sm text-zinc-500">
-                      {formatTime(record.createdAt)}
-                    </span>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Ruler className="h-4 w-4 text-zinc-400 shrink-0" />
+                      <span className="text-sm text-zinc-500">
+                        {formatTime(record.createdAt)}
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => setRecordToDelete(record)}
+                      aria-label={`删除 ${formatTime(record.createdAt)} 的围度记录`}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
                   </div>
-                  <div className="space-y-1">
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                     {record.waist > 0 && (
                       <div className="text-sm">
                         腰围: {record.waist} cm
@@ -456,6 +508,38 @@ export default function MeasurementsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除 {recordToDelete ? formatTime(recordToDelete.createdAt) : ""} 的围度记录吗？此操作无法撤销。
+            </DialogDescription>
+          </DialogHeader>
+          {recordToDelete && (
+            <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
+              {getRecordSummary(recordToDelete)}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecordToDelete(null)}
+              disabled={isDeleting}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "删除中..." : "删除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
