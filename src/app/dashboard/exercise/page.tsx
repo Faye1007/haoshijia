@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,39 +33,61 @@ const intensityOptions = [
   { value: "high", label: "高强度", description: "很喘、大量出汗" },
 ];
 
+const exerciseUnitOptions = [
+  { value: "minutes", label: "分钟", placeholder: "例如: 30" },
+  { value: "steps", label: "步", placeholder: "例如: 8000" },
+  { value: "kilometers", label: "公里", placeholder: "例如: 5" },
+  { value: "reps", label: "次", placeholder: "例如: 20" },
+  { value: "sets", label: "组", placeholder: "例如: 4" },
+  { value: "laps", label: "圈", placeholder: "例如: 10" },
+  { value: "custom", label: "自定义", placeholder: "填写运动量" },
+];
+
 export default function ExercisePage() {
   const { user } = useAuth();
   const [exerciseType, setExerciseType] = useState("");
-  const [duration, setDuration] = useState("");
+  const [amount, setAmount] = useState("");
+  const [unit, setUnit] = useState("minutes");
+  const [customUnit, setCustomUnit] = useState("");
   const [calories, setCalories] = useState("");
   const [intensity, setIntensity] = useState<"light" | "medium" | "high">("medium");
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showHint, setShowHint] = useState(false);
   const [todayRecords, setTodayRecords] = useState<ExerciseRecord[]>([]);
   const [error, setError] = useState("");
 
   const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    if (!user) return;
-    loadTodayRecords();
-  }, [user]);
-
-  const loadTodayRecords = async () => {
+  const loadTodayRecords = useCallback(async () => {
     if (!user) return;
     const records = await getExerciseHistory(user.uid, today);
     setTodayRecords(records);
-    setIsLoading(false);
-  };
+  }, [today, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadTodayRecords();
+  }, [loadTodayRecords, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    if (!exerciseType || !duration) {
-      setError("请填写运动类型和时长");
+    const amountValue = Number(amount);
+    const customUnitValue = customUnit.trim();
+
+    if (!exerciseType || !amount) {
+      setError("请填写运动类型和运动量");
+      return;
+    }
+
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      setError("运动量必须大于 0");
+      return;
+    }
+
+    if (unit === "custom" && !customUnitValue) {
+      setError("请填写自定义单位");
       return;
     }
 
@@ -73,14 +95,26 @@ export default function ExercisePage() {
     setError("");
 
     try {
-      await addExerciseRecord(user.uid, today, {
+      const exerciseRecord: Omit<ExerciseRecord, "id" | "createdAt"> = {
         exerciseType,
-        duration: parseInt(duration),
-        calories: calories ? parseInt(calories) : 0,
+        amount: amountValue,
+        unit,
+        calories: calories ? Number(calories) : 0,
         intensity,
-      });
+      };
+
+      if (unit === "custom") {
+        exerciseRecord.customUnit = customUnitValue;
+      }
+      if (unit === "minutes") {
+        exerciseRecord.duration = amountValue;
+      }
+
+      await addExerciseRecord(user.uid, today, exerciseRecord);
       setExerciseType("");
-      setDuration("");
+      setAmount("");
+      setUnit("minutes");
+      setCustomUnit("");
       setCalories("");
       setIntensity("medium");
       setSaveSuccess(true);
@@ -108,7 +142,31 @@ export default function ExercisePage() {
     return found?.label || value;
   };
 
-  const totalDuration = todayRecords.reduce((sum, r) => sum + r.duration, 0);
+  const getUnitLabel = (recordUnit: string, recordCustomUnit?: string) => {
+    if (recordUnit === "custom") {
+      return recordCustomUnit || "自定义";
+    }
+    const found = exerciseUnitOptions.find((option) => option.value === recordUnit);
+    return found?.label || recordUnit;
+  };
+
+  const formatExerciseAmount = (record: ExerciseRecord) => {
+    const value = Number.isInteger(record.amount) ? record.amount : Number(record.amount.toFixed(2));
+    return `${value} ${getUnitLabel(record.unit, record.customUnit)}`;
+  };
+
+  const selectedUnit = exerciseUnitOptions.find((option) => option.value === unit);
+  const groupedAmounts = todayRecords.reduce<Record<string, number>>((totals, record) => {
+    const label = getUnitLabel(record.unit, record.customUnit);
+    totals[label] = (totals[label] || 0) + record.amount;
+    return totals;
+  }, {});
+  const amountSummary = Object.entries(groupedAmounts)
+    .map(([label, value]) => {
+      const formattedValue = Number.isInteger(value) ? value : Number(value.toFixed(2));
+      return `${formattedValue} ${label}`;
+    })
+    .join(" / ");
   const totalCalories = todayRecords.reduce((sum, r) => sum + r.calories, 0);
 
   return (
@@ -133,12 +191,14 @@ export default function ExercisePage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">运动时长</CardTitle>
+            <CardTitle className="text-sm font-medium text-zinc-500">运动量记录</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">{totalDuration} 分钟</span>
+              <span className="text-lg font-bold break-words">
+                {amountSummary || "未记录"}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -181,15 +241,47 @@ export default function ExercisePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="duration">时长 (分钟)</Label>
+                <Label htmlFor="amount">运动量</Label>
                 <Input
-                  id="duration"
+                  id="amount"
                   type="number"
-                  placeholder="例如: 30"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
+                  min="0"
+                  step="any"
+                  placeholder={selectedUnit?.placeholder || "填写运动量"}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="unit">运动量单位</Label>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger id="unit">
+                    <SelectValue placeholder="选择单位" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {exerciseUnitOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {unit === "custom" && (
+                <div className="space-y-2">
+                  <Label htmlFor="customUnit">自定义单位</Label>
+                  <Input
+                    id="customUnit"
+                    placeholder="例如: 分钟高抬腿"
+                    value={customUnit}
+                    onChange={(e) => setCustomUnit(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -260,7 +352,7 @@ export default function ExercisePage() {
                       <div className="text-sm text-zinc-500 flex items-center gap-3">
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {record.duration} 分钟
+                          {formatExerciseAmount(record)}
                         </span>
                         {record.calories > 0 && (
                           <span className="flex items-center gap-1">

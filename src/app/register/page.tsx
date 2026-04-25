@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { firebaseSignUp } from "@/lib/auth";
 import { createUserProfile } from "@/lib/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 
 const registerSchema = z.object({
   email: z.string().email("请输入有效的邮箱地址"),
@@ -24,6 +25,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,13 +37,19 @@ export default function RegisterPage() {
     resolver: zodResolver(registerSchema),
   });
 
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [authLoading, router, user]);
+
   const onSubmit = async (data: RegisterFormData) => {
     setError(null);
     setLoading(true);
     try {
       const user = await firebaseSignUp(data.email, data.password);
       await createUserProfile(user.uid, user.email || data.email);
-      router.push("/");
+      router.replace("/dashboard");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "注册失败，请稍后重试";
       setError(message);

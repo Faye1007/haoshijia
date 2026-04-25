@@ -1,5 +1,35 @@
 # 进度记录
 
+## Step 23: 运动记录支持自定义运动量单位 ✅ (完成日期: 2026-04-25)
+
+### 完成内容
+- 运动记录页支持按“运动量数值 + 单位”记录运动。
+- 单位支持：分钟、步、公里、次、组、圈、自定义。
+- 今日统计从“运动时长”调整为“运动量记录”，并按单位分组汇总。
+- 今日运动记录列表显示用户选择的单位。
+- Firestore 读取逻辑兼容旧 `duration` 数据，旧记录按分钟显示。
+- 新记录选择分钟时继续写入 `duration`，同时写入新的 `amount`、`unit` 字段。
+- 测试过程中修复登录成功后页面在登录页、首页和仪表盘之间反复跳转的问题：
+  - 登录和注册成功后直接 `replace` 到 `/dashboard`。
+  - 已登录用户打开登录/注册页时直接进入 `/dashboard`。
+  - 仪表盘鉴权守卫使用 `auth.currentUser` 兜底，避免 Firebase Auth 状态同步期间误跳回登录页。
+
+### 验证结果
+- 用户验证测试通过 ✅
+- `npx eslint src/app/dashboard/exercise/page.tsx src/lib/firestore.ts src/lib/review.ts` 通过 ✅
+- `npx eslint src/app/login/page.tsx src/app/register/page.tsx src/app/page.tsx src/app/dashboard/layout.tsx` 通过 ✅
+- `npx tsc --noEmit` 通过 ✅
+- `npm run lint` 仍存在既有无关错误，涉及 inventory、recipe 等文件，以及部分既有 hook dependency warning。
+- 本地开发服务使用 `npm run dev -- --webpack` 后可正常打开，绕过 Next 16 Turbopack 本地 panic。
+
+### Git 提交
+- 本次提交包含 Step 23 功能实现、登录跳转修复与对应文档更新。
+
+### 后续步骤
+- Step 24: 合并目标设定和体重记录
+
+---
+
 ## Step 22: 围度记录移动端优化与删除能力 ✅ (完成日期: 2026-04-25)
 
 ### 完成内容

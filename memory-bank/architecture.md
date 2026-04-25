@@ -60,7 +60,7 @@ haoshijia/
 | 体重记录 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图 |
 | 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、移动端紧凑摘要和今日记录删除 |
 | 饮食记录 | `/dashboard/food` | 已实现饮食记录、日复盘、周复盘、周计划 |
-| 运动记录 | `/dashboard/exercise` | 已实现基础运动记录，单位自定义待补充 |
+| 运动记录 | `/dashboard/exercise` | 已实现运动记录、自定义运动量单位和旧分钟数据兼容 |
 | 食材库存 | `/dashboard/inventory` | 已实现食材 CRUD |
 | 菜谱生成 | `/dashboard/recipe` | 已实现基础规则生成和条件设置 |
 | 复盘页 | `/dashboard/review` | 已实现独立日复盘和周复盘 |
@@ -68,7 +68,7 @@ haoshijia/
 ## 前端架构
 
 - 使用 Next.js App Router，页面主要为 Client Component。
-- 登录状态由 `AuthProvider` 提供，`dashboard/layout.tsx` 根据 Firebase Auth 状态保护后台页面。
+- 登录状态由 `AuthProvider` 提供，`dashboard/layout.tsx` 根据 Firebase Auth 状态保护后台页面；登录/注册成功后直接进入仪表盘，dashboard 守卫使用 `AuthContext` 用户并兜底读取 `auth.currentUser`，避免认证状态同步期间误跳回登录页。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
 - 图表使用 Recharts。
 - 图标使用 lucide-react，部分导航图标当前仍为内联 SVG path。
@@ -158,6 +158,16 @@ records/{userId}/daily/{date}/exercise/{recordId}
 - 同一天多条体重记录时，优先显示晨起体重；没有晨起体重时显示当天最新记录。
 - 今天没有体重记录时，回看最近 90 天的体重记录，使用最近一次记录作为参考，并在界面标注“最近记录”日期。
 - 用户资料中的 `currentWeight` 字段保留为兼容字段，界面文案按“初始体重”展示。
+
+运动记录字段：
+
+- `exerciseType`：运动类型。
+- `amount`：运动量数值。
+- `unit`：运动量单位，当前支持 `minutes`、`steps`、`kilometers`、`reps`、`sets`、`laps`、`custom`。
+- `customUnit`：自定义单位文本，仅 `unit` 为 `custom` 时写入。
+- `duration`：旧字段兼容；旧记录没有 `amount`、`unit` 时按 `duration + minutes` 读取，新记录选择分钟时继续写入该字段。
+- `calories`：可选热量消耗，未填写时为 0。
+- `intensity`：运动强度，取值为 `light`、`medium`、`high`。
 
 ### 周计划
 

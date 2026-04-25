@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Loader2, Menu, X } from "lucide-react";
 import { firebaseSignOut } from "@/lib/auth";
+import { auth } from "@/lib/firebase";
 
 const navItems = [
   { href: "/dashboard", label: "首页", icon: "Home" },
@@ -54,16 +55,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const activeUser = user ?? auth.currentUser;
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
+    if (!loading && !activeUser) {
+      router.replace("/login");
     }
-  }, [user, loading, router]);
-
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [pathname]);
+  }, [activeUser, loading, router]);
 
   const handleSignOut = async () => {
     await firebaseSignOut();
@@ -78,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     );
   }
 
-  if (!user) {
+  if (!activeUser) {
     return null;
   }
 
@@ -161,6 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <a
                     key={item.href}
                     href={item.href}
+                    onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-zinc-100 text-zinc-900"
@@ -201,10 +200,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex-1 flex flex-col lg:ml-56">
         <header className="h-14 bg-white border-b border-zinc-200 flex items-center justify-end px-4 md:px-6">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-600 hidden sm:inline">{user.email}</span>
+            <span className="text-sm text-zinc-600 hidden sm:inline">{activeUser.email}</span>
             <div className="h-8 w-8 rounded-full bg-zinc-200 flex items-center justify-center">
               <span className="text-sm font-medium text-zinc-600">
-                {user.email?.charAt(0).toUpperCase()}
+                {activeUser.email?.charAt(0).toUpperCase()}
               </span>
             </div>
           </div>

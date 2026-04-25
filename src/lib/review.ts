@@ -17,7 +17,10 @@ export interface WeeklyReviewData {
   exercise: {
     id: string;
     exerciseType: string;
-    duration: number;
+    duration?: number;
+    amount: number;
+    unit: string;
+    customUnit?: string;
     calories: number;
     intensity: string;
     createdAt: Date;

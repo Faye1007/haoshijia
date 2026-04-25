@@ -7,10 +7,7 @@ import {
   query,
   getDocs,
   orderBy,
-  limit,
   Timestamp,
-  where,
-  getCountFromServer,
   deleteDoc,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -277,11 +274,35 @@ export const getFoodHistory = async (
 export interface ExerciseRecord {
   id: string;
   exerciseType: string;
-  duration: number;
+  duration?: number;
+  amount: number;
+  unit: string;
+  customUnit?: string;
   calories: number;
   intensity: "light" | "medium" | "high";
   createdAt: Date;
 }
+
+const normalizeExerciseRecord = (id: string, data: Record<string, unknown>): ExerciseRecord => {
+  const amount = typeof data.amount === "number"
+    ? data.amount
+    : typeof data.duration === "number"
+      ? data.duration
+      : 0;
+  const unit = typeof data.unit === "string" ? data.unit : "minutes";
+
+  return {
+    id,
+    exerciseType: data.exerciseType as string,
+    duration: data.duration as number | undefined,
+    amount,
+    unit,
+    customUnit: data.customUnit as string | undefined,
+    calories: typeof data.calories === "number" ? data.calories : 0,
+    intensity: data.intensity as "light" | "medium" | "high",
+    createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+  };
+};
 
 export const addExerciseRecord = async (
   userId: string,
@@ -303,17 +324,7 @@ export const getExerciseHistory = async (
   const q = query(recordRef, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      exerciseType: data.exerciseType as string,
-      duration: data.duration as number,
-      calories: data.calories as number,
-      intensity: data.intensity as "light" | "medium" | "high",
-      createdAt: data.createdAt?.toDate() || new Date(),
-    };
-  });
+  return snapshot.docs.map((doc) => normalizeExerciseRecord(doc.id, doc.data()));
 };
 
 export const getWeeklyData = async (
@@ -385,15 +396,7 @@ export const getWeeklyData = async (
     const exerciseQ = query(exerciseRef, orderBy("createdAt", "desc"));
     const exerciseSnap = await getDocs(exerciseQ);
     exerciseSnap.docs.forEach((doc) => {
-      const data = doc.data();
-      exerciseData.push({
-        id: doc.id,
-        exerciseType: data.exerciseType as string,
-        duration: data.duration as number,
-        calories: data.calories as number,
-        intensity: data.intensity as "light" | "medium" | "high",
-        createdAt: data.createdAt?.toDate() || new Date(),
-      });
+      exerciseData.push(normalizeExerciseRecord(doc.id, doc.data()));
     });
   }
 
