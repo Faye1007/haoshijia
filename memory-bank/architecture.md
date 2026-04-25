@@ -53,7 +53,7 @@ haoshijia/
 | 首页 | `/` | 已实现基础入口 |
 | 登录 | `/login` | 已实现 Firebase 邮箱密码登录 |
 | 注册 | `/register` | 已实现 Firebase 邮箱密码注册 |
-| 仪表盘 | `/dashboard` | 已实现，但今日体重同步存在已知问题 |
+| 仪表盘 | `/dashboard` | 已实现，今日体重已从体重记录子集合同步 |
 | 目标设定 | `/dashboard/goal` | 已实现 |
 | 体重记录 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图 |
 | 围度记录 | `/dashboard/measurements` | 已实现记录和趋势图，删除能力待补充 |
@@ -140,12 +140,20 @@ records/{userId}/daily/{date}/exercise/{recordId}
 
 - `addDailyRecord`
 - `getDailyRecords`
+- `getLatestDisplayWeight`
 - `getWeightHistory`
 - `getMeasurementHistory`
 - `getFoodHistory`
 - `addExerciseRecord`
 - `getExerciseHistory`
 - `getWeeklyData`
+
+仪表盘体重显示规则：
+
+- 今日体重读取 `records/{userId}/daily/{date}/weight` 子集合。
+- 同一天多条体重记录时，优先显示晨起体重；没有晨起体重时显示当天最新记录。
+- 今天没有体重记录时，回看最近 90 天的体重记录，使用最近一次记录作为参考，并在界面标注“最近记录”日期。
+- 用户资料中的 `currentWeight` 字段保留为兼容字段，界面文案按“初始体重”展示。
 
 ### 周计划
 
@@ -180,7 +188,5 @@ ingredients/{userId}/items/{ingredientId}
 ## 已知架构问题
 
 - `/dashboard/review` 导航已存在，但页面文件缺失。
-- 仪表盘今日体重读取路径与实际 Firestore 子集合结构不一致。
 - `getUserProfile` 的返回值需要与 `recipeSettings` 使用场景保持一致。
 - 目标设定和体重记录、食材库存和菜谱生成后续计划合并，详见 `memory-bank/modification-plan.md`。
-

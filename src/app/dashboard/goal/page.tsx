@@ -68,7 +68,7 @@ export default function GoalPage() {
     const target = parseFloat(formData.targetWeight);
 
     if (!formData.currentWeight) {
-      newErrors.currentWeight = "请输入当前体重";
+      newErrors.currentWeight = "请输入初始体重";
     } else if (isNaN(current) || current < 30 || current > 300) {
       newErrors.currentWeight = "体重应在 30-300 kg 之间";
     }
@@ -78,7 +78,7 @@ export default function GoalPage() {
     } else if (isNaN(target) || target < 30 || target > 300) {
       newErrors.targetWeight = "目标体重应在 30-300 kg 之间";
     } else if (target >= current) {
-      newErrors.targetWeight = "目标体重必须小于当前体重";
+      newErrors.targetWeight = "目标体重必须小于初始体重";
     }
 
     if (!formData.targetDate) {
@@ -152,7 +152,7 @@ export default function GoalPage() {
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
           <p>• 建议每周减重 0.5kg 左右，健康且可持续</p>
           <p>• 目标日期建议设置 3-6 个月</p>
-          <p>• 当前体重为晨起空腹体重更准确</p>
+          <p>• 初始体重建议使用晨起空腹体重</p>
         </div>
       )}
 
@@ -160,12 +160,12 @@ export default function GoalPage() {
         <Card>
           <CardHeader>
             <CardTitle>体重目标</CardTitle>
-            <CardDescription>填写您的当前体重和目标体重</CardDescription>
+            <CardDescription>填写您的初始体重和目标体重</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="currentWeight">当前体重 (kg)</Label>
+                <Label htmlFor="currentWeight">初始体重 (kg)</Label>
                 <Input
                   id="currentWeight"
                   type="number"
@@ -248,7 +248,7 @@ export default function GoalPage() {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-zinc-500">当前体重</span>
+                <span className="text-zinc-500">初始体重</span>
                 <span className="font-medium">{current} kg</span>
               </div>
               <div className="flex justify-between">

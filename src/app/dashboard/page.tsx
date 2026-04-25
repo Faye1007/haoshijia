@@ -3,10 +3,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getLatestDisplayWeight, getUserProfile, type DisplayWeight } from "@/lib/firestore";
 import { useEffect, useState } from "react";
-import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp, Ruler } from "lucide-react";
+import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp } from "lucide-react";
 
 interface UserProfile {
   currentWeight?: number;
@@ -76,7 +75,7 @@ function ActionCard({ action }: { action: typeof quickActions[0] }) {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [todayWeight, setTodayWeight] = useState<number | null>(null);
+  const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -85,26 +84,26 @@ export default function DashboardPage() {
       if (!user) return;
       const today = new Date().toISOString().split("T")[0];
       
-      const profileDoc = await getDoc(doc(db, "users", user.uid));
-      if (profileDoc.exists()) {
-        const data = profileDoc.data() as UserProfile;
-        setProfile(data);
-        if (!data.targetWeight || !data.currentWeight) {
+      const profileData = await getUserProfile(user.uid);
+      if (profileData) {
+        setProfile(profileData);
+        if (!profileData.targetWeight || !profileData.currentWeight) {
           setShowGuide(true);
         }
       } else {
         setShowGuide(true);
       }
 
-      const weightDoc = await getDoc(doc(db, "records", user.uid, "daily", today));
-      if (weightDoc.exists()) {
-        const data = weightDoc.data();
-        if (data.weight) setTodayWeight(data.weight);
-      }
+      const weight = await getLatestDisplayWeight(user.uid, today);
+      setDisplayWeight(weight);
       setIsLoading(false);
     }
     fetchData();
   }, [user]);
+
+  const remainingWeight = profile?.targetWeight && displayWeight
+    ? displayWeight.weight - profile.targetWeight
+    : null;
 
   const quickGuides = [
     { icon: Scale, title: "记录体重", desc: "晨起空腹称重最准确", href: "/dashboard/weight" },
@@ -172,8 +171,15 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {todayWeight ? (
-              <div className="text-2xl font-bold">{todayWeight} kg</div>
+            {displayWeight ? (
+              <div className="space-y-1">
+                <div className="text-2xl font-bold">{displayWeight.weight} kg</div>
+                <div className="text-xs text-zinc-500">
+                  {displayWeight.source === "today"
+                    ? displayWeight.isMorning ? "今日晨起体重" : "今日最新记录"
+                    : `最近记录：${displayWeight.date}`}
+                </div>
+              </div>
             ) : (
               <div className="text-lg text-zinc-400">未记录</div>
             )}
@@ -183,7 +189,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-zinc-500">
-              当前体重
+              初始体重
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -230,11 +236,13 @@ export default function DashboardPage() {
           <CardTitle>进展概览</CardTitle>
         </CardHeader>
         <CardContent>
-          {profile?.currentWeight && profile?.targetWeight && todayWeight ? (
+          {profile?.targetWeight && displayWeight && remainingWeight !== null ? (
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">当前</span>
-                <span className="font-medium">{profile.currentWeight} kg</span>
+                <span className="text-zinc-500">
+                  {displayWeight.source === "today" ? "今日" : "最近记录"}
+                </span>
+                <span className="font-medium">{displayWeight.weight} kg</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">目标</span>
@@ -243,7 +251,7 @@ export default function DashboardPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">还需</span>
                 <span className="font-medium">
-                  {(profile.currentWeight - profile.targetWeight).toFixed(1)} kg
+                  {remainingWeight.toFixed(1)} kg
                 </span>
               </div>
             </div>

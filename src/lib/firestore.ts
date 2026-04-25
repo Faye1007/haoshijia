@@ -86,6 +86,70 @@ export interface WeightRecord {
   isMorning: boolean;
 }
 
+export interface DisplayWeight {
+  date: string;
+  weight: number;
+  isMorning: boolean;
+  source: "today" | "latest";
+}
+
+const getDisplayWeightForDate = async (
+  userId: string,
+  date: string
+): Promise<Omit<DisplayWeight, "source"> | null> => {
+  const recordRef = collection(db, "records", userId, "daily", date, "weight");
+  const q = query(recordRef, orderBy("createdAt", "asc"));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const dayRecords = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      date,
+      weight: data.weight as number,
+      isMorning: data.isMorning as boolean,
+    };
+  });
+  const morningRecord = dayRecords.find((record) => record.isMorning);
+
+  return morningRecord || dayRecords[dayRecords.length - 1];
+};
+
+export const getLatestDisplayWeight = async (
+  userId: string,
+  today: string,
+  days: number = 90
+): Promise<DisplayWeight | null> => {
+  const todayWeight = await getDisplayWeightForDate(userId, today);
+
+  if (todayWeight) {
+    return {
+      ...todayWeight,
+      source: "today",
+    };
+  }
+
+  const todayDate = new Date(today);
+  for (let i = 1; i < days; i++) {
+    const date = new Date(todayDate);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    const weight = await getDisplayWeightForDate(userId, dateStr);
+
+    if (weight) {
+      return {
+        ...weight,
+        source: "latest",
+      };
+    }
+  }
+
+  return null;
+};
+
 export interface MeasurementRecord {
   id: string;
   waist: number;

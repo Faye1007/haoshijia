@@ -1,5 +1,35 @@
 # 进度记录
 
+## Step 20: 仪表盘体重同步与文案调整 ✅ (完成日期: 2026-04-25)
+
+### 完成内容
+- 修复仪表盘今日体重读取路径：
+  - 从 `records/{userId}/daily/{date}/weight` 子集合读取体重记录。
+  - 今日有晨起体重时优先显示晨起体重。
+  - 今日无晨起体重时显示当天最新记录。
+  - 今日无记录时回看最近 90 天记录，并在仪表盘标注“最近记录”日期。
+- 仪表盘三项体重口径调整为：
+  - 今日体重
+  - 初始体重
+  - 目标体重
+- 进展概览改为使用今日体重或最近体重与目标体重计算“还需”。
+- 目标设定页面将用户可见的“当前体重”文案调整为“初始体重”。
+- 保留内部字段 `currentWeight`，不做 Firestore 数据迁移。
+
+### 验证结果
+- 用户验证测试通过 ✅
+- `npm run build` 通过 ✅
+- `npx eslint src/app/dashboard/page.tsx src/app/dashboard/goal/page.tsx src/lib/firestore.ts` 无错误；仅保留 `src/lib/firestore.ts` 既有未使用导入 warning。
+- 全量 `npm run lint` 仍存在既有无关错误，涉及 inventory、recipe、layout 等文件。
+
+### Git 提交
+- 本次提交包含 Step 20 功能实现与对应文档更新。
+
+### 后续步骤
+- Step 21: 新建独立复盘页面
+
+---
+
 ## 修改规划：功能优化与重构计划 ✅ (完成日期: 2026-04-25)
 
 ### 背景
