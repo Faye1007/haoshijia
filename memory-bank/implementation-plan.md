@@ -796,6 +796,7 @@
 - `npx tsc --noEmit` 通过。
 - `npm run lint` 通过，无 warning。
 - `npm run build` 通过。
+- 本地已有 `npm run dev -- --port 3001` 服务，访问 `/dashboard` 返回 `200 OK`。
 
 ---
 
@@ -816,6 +817,16 @@
 **影响文档**：
 - 完成后更新 `memory-bank/progress.md`。
 - 更新 `memory-bank/architecture.md` 中仪表盘展示内容说明。
+
+**完成说明**：
+- 已完成，完成日期：2026-04-26。
+- 仪表盘已新增围度概览，显示腰围、臀围、大腿围、上臂围最近有效值和记录日期。
+- 腰围使用重点卡片展示，其他围度使用紧凑网格展示。
+- 无围度记录时显示明确空状态。
+- 复用已有 `getLatestMeasurementSummary`，不新增 Firestore 字段。
+- `npx tsc --noEmit` 通过。
+- `npm run lint` 通过，无 warning。
+- `npm run build` 通过。
 
 ---
 

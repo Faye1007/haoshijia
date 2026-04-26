@@ -4,10 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import { useAuth } from "@/contexts/AuthContext";
-import { getLatestDisplayWeight, getUserProfile, type DisplayWeight, type UserProfile } from "@/lib/firestore";
+import {
+  getLatestDisplayWeight,
+  getLatestMeasurementSummary,
+  getUserProfile,
+  type DisplayWeight,
+  type LatestMeasurementSummary,
+  type UserProfile,
+} from "@/lib/firestore";
 import { getProfileDisplayName } from "@/lib/profile";
 import { useEffect, useState } from "react";
-import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp } from "lucide-react";
+import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp, Ruler } from "lucide-react";
 
 const quickActions = [
   {
@@ -38,6 +45,26 @@ const quickActions = [
     icon: "M18 20V10M12 20V4M6 20v-6",
     color: "bg-purple-50 text-purple-600 hover:bg-purple-100",
   },
+];
+
+const emptyMeasurementSummary: LatestMeasurementSummary = {
+  waist: null,
+  hip: null,
+  thigh: null,
+  upperArm: null,
+};
+
+const measurementLabels: Record<keyof LatestMeasurementSummary, string> = {
+  waist: "腰围",
+  hip: "臀围",
+  thigh: "大腿围",
+  upperArm: "上臂围",
+};
+
+const secondaryMeasurementKeys: (keyof LatestMeasurementSummary)[] = [
+  "hip",
+  "thigh",
+  "upperArm",
 ];
 
 function ActionCard({ action }: { action: typeof quickActions[0] }) {
@@ -73,6 +100,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
+  const [measurementSummary, setMeasurementSummary] = useState<LatestMeasurementSummary>(emptyMeasurementSummary);
   const [isLoading, setIsLoading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -81,31 +109,46 @@ export default function DashboardPage() {
       if (!user) return;
       setIsLoading(true);
       const today = new Date().toISOString().split("T")[0];
-      
-      const profileData = await getUserProfile(user.uid);
-      if (profileData) {
-        setProfile(profileData);
-        if (!profileData.targetWeight || !profileData.currentWeight) {
+
+      try {
+        const [profileData, weight, measurements] = await Promise.all([
+          getUserProfile(user.uid),
+          getLatestDisplayWeight(user.uid, today),
+          getLatestMeasurementSummary(user.uid),
+        ]);
+
+        if (profileData) {
+          setProfile(profileData);
+          if (!profileData.targetWeight || !profileData.currentWeight) {
+            setShowGuide(true);
+          }
+        } else {
           setShowGuide(true);
         }
-      } else {
-        setShowGuide(true);
-      }
 
-      const weight = await getLatestDisplayWeight(user.uid, today);
-      setDisplayWeight(weight);
-      setIsLoading(false);
+        setDisplayWeight(weight);
+        setMeasurementSummary(measurements);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    if (!user) return;
+    if (!user) {
+      setProfile(null);
+      setDisplayWeight(null);
+      setMeasurementSummary(emptyMeasurementSummary);
+      return;
+    }
     fetchData();
   }, [user]);
 
   const visibleProfile = user ? profile : null;
   const visibleDisplayWeight = user ? displayWeight : null;
+  const visibleMeasurementSummary = user ? measurementSummary : emptyMeasurementSummary;
   const displayName = getProfileDisplayName(visibleProfile, user?.email);
   const remainingWeight = visibleProfile?.targetWeight && visibleDisplayWeight
     ? visibleDisplayWeight.weight - visibleProfile.targetWeight
     : null;
+  const hasMeasurementRecord = Object.values(visibleMeasurementSummary).some(Boolean);
 
   const quickGuides = [
     { icon: Scale, title: "记录体重", desc: "晨起空腹称重最准确", href: "/dashboard/weight" },
@@ -222,6 +265,57 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>围度概览</CardTitle>
+          <CardDescription>最近 90 天内的有效围度记录</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {hasMeasurementRecord ? (
+            <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_2fr] gap-4">
+              <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-sky-700">
+                  <Ruler className="h-4 w-4" />
+                  重点观察：腰围
+                </div>
+                <div className="mt-3 text-3xl font-bold text-zinc-900">
+                  {visibleMeasurementSummary.waist
+                    ? `${visibleMeasurementSummary.waist.value} cm`
+                    : "未记录"}
+                </div>
+                <div className="mt-1 text-xs text-zinc-500">
+                  {visibleMeasurementSummary.waist
+                    ? `最近记录：${visibleMeasurementSummary.waist.date}`
+                    : "建议优先记录腰围，方便观察减脂变化"}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {secondaryMeasurementKeys.map((key) => {
+                  const summary = visibleMeasurementSummary[key];
+
+                  return (
+                    <div key={key} className="rounded-lg border border-zinc-200 bg-white/60 p-4">
+                      <div className="text-sm text-zinc-500">{measurementLabels[key]}</div>
+                      <div className="mt-2 text-xl font-bold text-zinc-900">
+                        {summary ? `${summary.value} cm` : "未记录"}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        {summary ? `最近记录：${summary.date}` : "暂无有效记录"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-zinc-200 bg-white/50 p-4 text-sm text-zinc-500">
+              暂无围度记录。记录腰围、臀围、大腿围和上臂围后，仪表盘会显示最近有效值和记录日期。
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
