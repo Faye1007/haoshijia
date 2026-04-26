@@ -30,7 +30,9 @@ haoshijia/
 │   │       ├── inventory/page.tsx   # 食材库存
 │   │       └── recipe/page.tsx      # 菜谱生成
 │   ├── components/
+│   │   ├── AuthRequiredDialog.tsx   # 未登录写入动作登录提醒弹窗
 │   │   ├── Providers.tsx            # 全局 Provider 组合
+│   │   ├── RecordPrincipleNotice.tsx # 真实记录原则统一提示
 │   │   └── ui/                      # shadcn/ui 基础组件
 │   ├── contexts/
 │   │   └── AuthContext.tsx          # Firebase Auth 全局状态
@@ -73,6 +75,7 @@ haoshijia/
 - 登录/注册成功后直接进入仪表盘；布局仍使用 `AuthContext` 用户并兜底读取 `auth.currentUser` 展示已登录账号，避免认证状态同步期间误显示游客态。
 - 侧边栏导航已将目标设定合并到体重记录入口，体重记录页同时承担体重记录、趋势查看和目标设置。
 - 侧边栏导航已将食材库存和菜谱生成合并为“食材与菜谱”入口，页面内使用 Tab 组织食材库存、一周菜谱和条件设置。
+- 首页、仪表盘和体重、围度、饮食、运动记录页共用 `RecordPrincipleNotice`，提示记录用于复盘、请尽量真实填写、历史记录暂不支持修改；今日误录仍按各页面已有能力删除或重新记录，不扩展任意历史编辑能力。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
 - 全局视觉风格已升级为冰蓝玻璃感：
   - `src/app/globals.css` 定义冷白、浅蓝灰、蓝青色主基调，以及 `app-aurora-bg` 背景。

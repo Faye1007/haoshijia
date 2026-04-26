@@ -1,5 +1,30 @@
 # 进度记录
 
+## Step 31: 真实记录原则提示 ✅ (完成日期: 2026-04-26)
+
+### 完成内容
+- 新增统一 `RecordPrincipleNotice` 组件，用于提示“真实记录，才方便复盘”。
+- 首页 `/` 增加真实记录原则提示，让首次访问者在进入应用前理解记录口径。
+- 仪表盘 `/dashboard` 增加真实记录原则提示，作为记录入口前的统一说明。
+- 体重、围度、饮食、运动记录页均增加同一提示，明确历史记录暂不支持修改。
+- 文案保留今日误录可按页面已有能力删除或重新记录的说明，不扩展任意历史编辑能力。
+- 本次不改动 Firestore 数据结构，不修改现有保存、删除或记录流程。
+
+### 验证结果
+- 用户验证测试通过 ✅
+- `npx tsc --noEmit` 通过 ✅
+- `npm run lint` 无 error，仅剩 4 个既有 hook dependency warning ✅
+- `npm run build` 通过 ✅
+- 本地使用 `npm run dev -- --port 3001` 可正常访问 `/`、`/dashboard`、`/dashboard/weight`、`/dashboard/food`、`/dashboard/measurements`、`/dashboard/exercise`，均返回 `200 OK` ✅
+
+### Git 提交
+- 本次提交包含 Step 31 真实记录提示与对应文档更新。
+
+### 后续步骤
+- Step 32: 昵称与个人资料
+
+---
+
 ## Step 30: 冰蓝玻璃感视觉升级 ✅ (完成日期: 2026-04-26)
 
 ### 完成内容

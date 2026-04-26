@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
+import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import {
   Dialog,
   DialogContent,
@@ -246,6 +247,8 @@ export default function MeasurementsPage() {
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">围度记录</h2>
         <p className="text-zinc-500">记录您的身体围度变化</p>
       </div>
+
+      <RecordPrincipleNotice />
 
       <div className="flex justify-end">
         <button

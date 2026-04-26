@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLatestDisplayWeight, getUserProfile, type DisplayWeight } from "@/lib/firestore";
 import { useEffect, useState } from "react";
@@ -168,6 +169,8 @@ export default function DashboardPage() {
           {user ? `欢迎回来 ${user.email}` : "当前为只读浏览，登录后可开始记录"}
         </p>
       </div>
+
+      <RecordPrincipleNotice />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>

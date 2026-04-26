@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -26,6 +27,7 @@ export default function Home() {
               你可以先进入应用浏览功能结构。需要保存体重、饮食、运动、食材或个人计划时，再登录或注册账号。
             </p>
           </div>
+          <RecordPrincipleNotice />
           <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Button asChild size="lg">
               <a href="/dashboard">进入仪表盘浏览</a>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
+import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   addDailyRecord,
@@ -260,6 +261,8 @@ export default function WeightPage() {
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">体重记录</h2>
         <p className="text-zinc-500">记录您的体重变化</p>
       </div>
+
+      <RecordPrincipleNotice />
 
       <div className="flex justify-end">
         <button
