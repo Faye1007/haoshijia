@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import {
   Select,
   SelectContent,
@@ -55,6 +56,7 @@ export default function ExercisePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [todayRecords, setTodayRecords] = useState<ExerciseRecord[]>([]);
   const [error, setError] = useState("");
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -71,7 +73,10 @@ export default function ExercisePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
 
     const amountValue = Number(amount);
     const customUnitValue = customUnit.trim();
@@ -376,6 +381,7 @@ export default function ExercisePage() {
           </CardContent>
         </Card>
       )}
+      <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }

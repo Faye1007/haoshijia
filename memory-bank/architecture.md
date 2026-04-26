@@ -19,7 +19,7 @@ haoshijia/
 │   │   ├── login/page.tsx           # 登录页
 │   │   ├── register/page.tsx        # 注册页
 │   │   └── dashboard/
-│   │       ├── layout.tsx           # 登录保护、侧边栏、移动端菜单
+│   │       ├── layout.tsx           # 只读浏览布局、侧边栏、移动端菜单
 │   │       ├── page.tsx             # 仪表盘
 │   │       ├── goal/page.tsx        # 目标设定
 │   │       ├── weight/page.tsx      # 体重记录
@@ -52,10 +52,10 @@ haoshijia/
 
 | 页面 | 路径 | 当前状态 |
 |---|---|---|
-| 首页 | `/` | 已实现基础入口 |
+| 首页 | `/` | 已实现公开入口，未登录可进入仪表盘浏览 |
 | 登录 | `/login` | 已实现 Firebase 邮箱密码登录 |
 | 注册 | `/register` | 已实现 Firebase 邮箱密码注册 |
-| 仪表盘 | `/dashboard` | 已实现，今日体重已从体重记录子集合同步 |
+| 仪表盘 | `/dashboard` | 已实现，支持未登录只读浏览，今日体重已从体重记录子集合同步 |
 | 体重记录与目标 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图、目标摘要和目标设置 |
 | 目标设定兼容跳转 | `/dashboard/goal` | 兼容旧入口，自动跳转到 `/dashboard/weight#goal-settings` |
 | 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、移动端紧凑摘要和今日记录删除 |
@@ -68,7 +68,9 @@ haoshijia/
 ## 前端架构
 
 - 使用 Next.js App Router，页面主要为 Client Component。
-- 登录状态由 `AuthProvider` 提供，`dashboard/layout.tsx` 根据 Firebase Auth 状态保护后台页面；登录/注册成功后直接进入仪表盘，dashboard 守卫使用 `AuthContext` 用户并兜底读取 `auth.currentUser`，避免认证状态同步期间误跳回登录页。
+- 登录状态由 `AuthProvider` 提供，dashboard 页面支持未登录只读浏览，不再由 `dashboard/layout.tsx` 强制跳转登录页。
+- 未登录用户可访问 `/dashboard` 和各 dashboard 子页面；涉及保存、记录、删除、生成计划和编辑设置等写入动作时，由页面级逻辑拦截并弹出登录/注册提醒。
+- 登录/注册成功后直接进入仪表盘；布局仍使用 `AuthContext` 用户并兜底读取 `auth.currentUser` 展示已登录账号，避免认证状态同步期间误显示游客态。
 - 侧边栏导航已将目标设定合并到体重记录入口，体重记录页同时承担体重记录、趋势查看和目标设置。
 - 侧边栏导航已将食材库存和菜谱生成合并为“食材与菜谱”入口，页面内使用 Tab 组织食材库存、一周菜谱和条件设置。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。

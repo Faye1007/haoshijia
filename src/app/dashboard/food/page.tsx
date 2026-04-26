@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import {
   Select,
   SelectContent,
@@ -74,6 +75,7 @@ export default function FoodPage() {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -101,7 +103,10 @@ export default function FoodPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
 
     if (!foodDescription.trim()) {
       setError("请输入食物描述");
@@ -198,7 +203,11 @@ export default function FoodPage() {
   };
 
   const generateWeeklyPlan = async () => {
-    if (!user || !weeklyReview) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    if (!weeklyReview) return;
 
     const weekStart = getWeekStartDate(new Date());
     const weekEndDate = new Date(weekStart);
@@ -287,7 +296,10 @@ export default function FoodPage() {
   };
 
   const handleDeletePlan = async (planId: string) => {
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
     try {
       await deletePlan(user.uid, planId);
       loadPlans();
@@ -297,7 +309,11 @@ export default function FoodPage() {
   };
 
   const handleUpdatePlan = async (planId: string) => {
-    if (!user || !editingPlan) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    if (!editingPlan) return;
     setIsSavingPlan(true);
     try {
       await updatePlan(user.uid, planId, {
@@ -1005,6 +1021,7 @@ export default function FoodPage() {
           )}
         </TabsContent>
       </Tabs>
+      <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }

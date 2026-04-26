@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import {
   Dialog,
   DialogContent,
@@ -65,18 +66,22 @@ export default function MeasurementsPage() {
   const [recordToDelete, setRecordToDelete] = useState<TodayRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    if (!user) return;
     loadTodayRecords();
     loadHistory();
   }, [user, viewDays]);
 
   const loadTodayRecords = async () => {
     setIsLoading(true);
-    if (!user) return;
+    if (!user) {
+      setTodayRecords([]);
+      setIsLoading(false);
+      return;
+    }
     const records = await getDailyRecords(user.uid, today, "measurement");
     const formatted = records.map((r: Record<string, unknown>) => ({
       id: r.id as string,
@@ -98,7 +103,10 @@ export default function MeasurementsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
 
     const waistNum = parseFloat(waist);
     const hipNum = parseFloat(hip);
@@ -147,7 +155,12 @@ export default function MeasurementsPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!user || !recordToDelete) return;
+    if (!recordToDelete) return;
+    if (!user) {
+      setRecordToDelete(null);
+      setAuthDialogOpen(true);
+      return;
+    }
 
     setIsDeleting(true);
     setError("");
@@ -540,6 +553,7 @@ export default function MeasurementsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   addDailyRecord,
@@ -60,6 +61,7 @@ export default function WeightPage() {
   const [viewDays, setViewDays] = useState<number>(7);
   const [error, setError] = useState("");
   const [goalErrors, setGoalErrors] = useState<GoalFormErrors>({});
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [goalFormData, setGoalFormData] = useState<GoalFormData>({
     currentWeight: "",
     targetWeight: "",
@@ -69,7 +71,11 @@ export default function WeightPage() {
   const today = new Date().toISOString().split("T")[0];
 
   const loadTodayRecords = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setTodayRecords([]);
+      setIsLoading(false);
+      return;
+    }
     const records = await getDailyRecords(user.uid, today, "weight");
     const formatted = records.map((r: Record<string, unknown>) => ({
       id: r.id as string,
@@ -112,13 +118,15 @@ export default function WeightPage() {
   }, [loadGoalData, loadHistory, loadTodayRecords]);
 
   useEffect(() => {
-    if (!user) return;
     refreshWeightData();
   }, [refreshWeightData, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
 
     const weightNum = parseFloat(weight);
     if (isNaN(weightNum) || weightNum < 20 || weightNum > 300) {
@@ -177,7 +185,11 @@ export default function WeightPage() {
 
   const handleGoalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !validateGoal()) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    if (!validateGoal()) return;
 
     setIsSaving(true);
     try {
@@ -580,6 +592,7 @@ export default function WeightPage() {
           </CardContent>
         </Card>
       </form>
+      <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }

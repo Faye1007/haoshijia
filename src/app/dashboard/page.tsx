@@ -76,12 +76,13 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
       if (!user) return;
+      setIsLoading(true);
       const today = new Date().toISOString().split("T")[0];
       
       const profileData = await getUserProfile(user.uid);
@@ -98,11 +99,14 @@ export default function DashboardPage() {
       setDisplayWeight(weight);
       setIsLoading(false);
     }
+    if (!user) return;
     fetchData();
   }, [user]);
 
-  const remainingWeight = profile?.targetWeight && displayWeight
-    ? displayWeight.weight - profile.targetWeight
+  const visibleProfile = user ? profile : null;
+  const visibleDisplayWeight = user ? displayWeight : null;
+  const remainingWeight = visibleProfile?.targetWeight && visibleDisplayWeight
+    ? visibleDisplayWeight.weight - visibleProfile.targetWeight
     : null;
 
   const quickGuides = [
@@ -124,7 +128,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {showGuide && (
+      {(!user || showGuide) && (
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-700">
@@ -160,7 +164,9 @@ export default function DashboardPage() {
 
       <div>
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">仪表盘</h2>
-        <p className="text-zinc-500">欢迎回来 {user?.email}</p>
+        <p className="text-zinc-500">
+          {user ? `欢迎回来 ${user.email}` : "当前为只读浏览，登录后可开始记录"}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -171,13 +177,13 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {displayWeight ? (
+            {visibleDisplayWeight ? (
               <div className="space-y-1">
-                <div className="text-2xl font-bold">{displayWeight.weight} kg</div>
+                <div className="text-2xl font-bold">{visibleDisplayWeight.weight} kg</div>
                 <div className="text-xs text-zinc-500">
-                  {displayWeight.source === "today"
-                    ? displayWeight.isMorning ? "今日晨起体重" : "今日最新记录"
-                    : `最近记录：${displayWeight.date}`}
+                  {visibleDisplayWeight.source === "today"
+                    ? visibleDisplayWeight.isMorning ? "今日晨起体重" : "今日最新记录"
+                    : `最近记录：${visibleDisplayWeight.date}`}
                 </div>
               </div>
             ) : (
@@ -193,8 +199,8 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {profile?.currentWeight ? (
-              <div className="text-2xl font-bold">{profile.currentWeight} kg</div>
+            {visibleProfile?.currentWeight ? (
+              <div className="text-2xl font-bold">{visibleProfile.currentWeight} kg</div>
             ) : (
               <div className="text-lg text-zinc-400">未设置</div>
             )}
@@ -208,8 +214,8 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {profile?.targetWeight ? (
-              <div className="text-2xl font-bold">{profile.targetWeight} kg</div>
+            {visibleProfile?.targetWeight ? (
+              <div className="text-2xl font-bold">{visibleProfile.targetWeight} kg</div>
             ) : (
               <div className="text-lg text-zinc-400">未设置</div>
             )}
@@ -236,17 +242,17 @@ export default function DashboardPage() {
           <CardTitle>进展概览</CardTitle>
         </CardHeader>
         <CardContent>
-          {profile?.targetWeight && displayWeight && remainingWeight !== null ? (
+          {visibleProfile?.targetWeight && visibleDisplayWeight && remainingWeight !== null ? (
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">
-                  {displayWeight.source === "today" ? "今日" : "最近记录"}
+                  {visibleDisplayWeight.source === "today" ? "今日" : "最近记录"}
                 </span>
-                <span className="font-medium">{displayWeight.weight} kg</span>
+                <span className="font-medium">{visibleDisplayWeight.weight} kg</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">目标</span>
-                <span className="font-medium">{profile.targetWeight} kg</span>
+                <span className="font-medium">{visibleProfile.targetWeight} kg</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">还需</span>

@@ -57,7 +57,10 @@ export default function ReviewPage() {
 
   useEffect(() => {
     async function loadReviewData() {
-      if (!user) return;
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
 
       setIsLoading(true);
       try {

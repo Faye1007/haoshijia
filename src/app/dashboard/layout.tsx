@@ -2,10 +2,11 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Loader2, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 import { firebaseSignOut } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { href: "/dashboard", label: "首页", icon: "Home" },
@@ -48,34 +49,16 @@ function NavIcon({ name }: { name: string }) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const activeUser = user ?? auth.currentUser;
 
-  useEffect(() => {
-    if (!loading && !activeUser) {
-      router.replace("/login");
-    }
-  }, [activeUser, loading, router]);
-
   const handleSignOut = async () => {
     await firebaseSignOut();
     router.push("/");
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!activeUser) {
-    return null;
-  }
 
   return (
     <div className="dashboard-shell min-h-screen flex">
@@ -115,27 +98,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
-        <div className="p-2 border-t border-zinc-200">
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 w-full transition-colors"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        {activeUser ? (
+          <div className="p-2 border-t border-zinc-200">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 w-full transition-colors"
             >
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-            退出登录
-          </button>
-        </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+              退出登录
+            </button>
+          </div>
+        ) : (
+          <div className="p-2 border-t border-zinc-200 text-xs text-zinc-500">
+            登录后可保存记录
+          </div>
+        )}
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -169,41 +158,59 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 );
               })}
             </nav>
-            <div className="p-2 border-t border-zinc-200">
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 w-full transition-colors"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+            {activeUser ? (
+              <div className="p-2 border-t border-zinc-200">
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 w-full transition-colors"
                 >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-                </svg>
-                退出登录
-              </button>
-            </div>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                  </svg>
+                  退出登录
+                </button>
+              </div>
+            ) : (
+              <div className="p-2 border-t border-zinc-200 text-xs text-zinc-500">
+                登录后可保存记录
+              </div>
+            )}
           </div>
         </aside>
       )}
 
       <div className="dashboard-content flex-1 flex flex-col lg:ml-56">
         <header className="dashboard-header h-14 bg-white border-b border-zinc-200 flex items-center justify-end px-4 md:px-6">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-zinc-600 hidden sm:inline">{activeUser.email}</span>
-            <div className="h-8 w-8 rounded-full bg-zinc-200 flex items-center justify-center">
-              <span className="text-sm font-medium text-zinc-600">
-                {activeUser.email?.charAt(0).toUpperCase()}
-              </span>
+          {activeUser ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-zinc-600 hidden sm:inline">{activeUser.email}</span>
+              <div className="h-8 w-8 rounded-full bg-zinc-200 flex items-center justify-center">
+                <span className="text-sm font-medium text-zinc-600">
+                  {activeUser.email?.charAt(0).toUpperCase()}
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="hidden text-sm text-zinc-500 sm:inline">当前为只读浏览</span>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/login">登录</a>
+              </Button>
+              <Button size="sm" asChild>
+                <a href="/register">注册</a>
+              </Button>
+            </div>
+          )}
         </header>
         <main className="dashboard-main flex-1 bg-zinc-50 p-4 md:p-6">{children}</main>
       </div>

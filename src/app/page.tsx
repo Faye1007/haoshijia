@@ -4,8 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -17,32 +15,27 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-3xl font-bold">好食家</CardTitle>
-          <CardDescription>减脂助手 - 记录 · 复盘 · 计划</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2">
-            <Button asChild className="w-full">
-              <a href="/login">登录</a>
+    <div className="min-h-screen bg-zinc-50 p-4">
+      <main className="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center text-center">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold text-zinc-900 sm:text-5xl">好食家</h1>
+            <p className="text-lg text-zinc-600">减脂记录 · 行为复盘 · 菜谱计划</p>
+            <p className="mx-auto max-w-2xl text-sm leading-6 text-zinc-500">
+              你可以先进入应用浏览功能结构。需要保存体重、饮食、运动、食材或个人计划时，再登录或注册账号。
+            </p>
+          </div>
+          <div className="flex flex-col justify-center gap-3 sm:flex-row">
+            <Button asChild size="lg">
+              <a href="/dashboard">进入仪表盘浏览</a>
             </Button>
-            <Button asChild variant="outline" className="w-full">
-              <a href="/register">注册</a>
+            <Button asChild variant="outline" size="lg">
+              <a href="/login">登录账号</a>
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }

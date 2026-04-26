@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -152,9 +153,14 @@ export default function InventoryPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<Ingredient | null>(null);
+  const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const loadIngredients = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setIngredients([]);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const data = await getIngredients(user.uid);
@@ -179,7 +185,6 @@ export default function InventoryPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
     loadIngredients();
     loadUserSettings();
   }, [loadIngredients, loadUserSettings, user]);
@@ -226,7 +231,10 @@ export default function InventoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
 
     const payload = validateIngredientForm();
     if (!payload) return;
@@ -259,7 +267,11 @@ export default function InventoryPage() {
   };
 
   const handleEditSave = async () => {
-    if (!user || !editingItem) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    if (!editingItem) return;
 
     const payload = validateIngredientForm();
     if (!payload) return;
@@ -277,7 +289,12 @@ export default function InventoryPage() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!user || !itemToDelete) return;
+    if (!user) {
+      setIsDeleteDialogOpen(false);
+      setAuthDialogOpen(true);
+      return;
+    }
+    if (!itemToDelete) return;
     try {
       await deleteIngredient(user.uid, itemToDelete.id);
       setIsDeleteDialogOpen(false);
@@ -289,7 +306,10 @@ export default function InventoryPage() {
   };
 
   const saveUserSettings = async () => {
-    if (!user) return;
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
     try {
       const recipeSettings: Record<string, unknown> = { ...settings };
       await updateUserProfile(user.uid, { recipeSettings });
@@ -1211,6 +1231,7 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
 }
