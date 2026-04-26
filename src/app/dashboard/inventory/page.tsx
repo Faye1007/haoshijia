@@ -60,6 +60,12 @@ interface MealPlan {
 
 type RecipeView = "table" | "grid" | "calendar";
 
+interface ShoppingNeed {
+  category: string;
+  reason: string;
+  priority: "required" | "optional";
+}
+
 const categories = [
   { value: "肉类", label: "肉类", color: "bg-red-100 text-red-700" },
   { value: "主食", label: "主食", color: "bg-amber-100 text-amber-700" },
@@ -97,29 +103,6 @@ const scenarioEquipment: Record<UserSettings["scenario"], string[]> = {
   家庭: ["电磁炉", "电饭煲", "微波炉", "空气炸锅", "蒸锅", "烤箱"],
 };
 
-const recipeSuggestions: Record<string, { main: string; side: string }[]> = {
-  肉类: [
-    { main: "鸡胸肉", side: "西兰花" },
-    { main: "鱼片", side: "番茄" },
-    { main: "牛肉", side: "胡萝卜" },
-  ],
-  主食: [
-    { main: "米饭", side: "鸡蛋" },
-    { main: "面条", side: "蔬菜" },
-    { main: "燕麦", side: "牛奶" },
-  ],
-  蔬菜: [
-    { main: "青菜", side: "蒜蓉" },
-    { main: "番茄", side: "鸡蛋" },
-    { main: "黄瓜", side: "凉拌" },
-  ],
-  蛋奶: [
-    { main: "鸡蛋", side: "全麦面包" },
-    { main: "牛奶", side: "燕麦" },
-    { main: "酸奶", side: "水果" },
-  ],
-};
-
 const hungryTimeTips: Record<string, string[]> = {
   上午: ["早餐要吃饱", "上午10点可加水果"],
   下午: ["午餐要丰富", "下午4点可加坚果"],
@@ -154,6 +137,8 @@ export default function InventoryPage() {
   const [weeklyPlan, setWeeklyPlan] = useState<MealPlan[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [recipeView, setRecipeView] = useState<RecipeView>("table");
+  const [recipeWarning, setRecipeWarning] = useState("");
+  const [shoppingNeeds, setShoppingNeeds] = useState<ShoppingNeed[]>([]);
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
 
   const [name, setName] = useState("");
@@ -332,23 +317,66 @@ export default function InventoryPage() {
       .sort((a, b) => a.remainingDays - b.remainingDays);
   };
 
-  const getMealCategory = (mealType: string): string => {
-    switch (mealType) {
-      case "早餐":
-        return "主食";
-      case "午餐":
-        return "肉类";
-      case "晚餐":
-        return "蔬菜";
-      default:
-        return "主食";
-    }
-  };
-
   const generateWeeklyPlan = () => {
+    const staples = getCategoryIngredients("主食");
+    const vegetables = getCategoryIngredients("蔬菜");
+    const fruits = getCategoryIngredients("水果");
+    const proteins = ingredients
+      .filter((item) => item.category === "肉类" || item.category === "蛋奶")
+      .sort((a, b) => a.remainingDays - b.remainingDays);
+    const requiredNeeds: ShoppingNeed[] = [];
+    const optionalNeeds: ShoppingNeed[] = [];
+
+    if (staples.length === 0) {
+      requiredNeeds.push({
+        category: "主食不足",
+        reason: "早餐和午餐需要至少 1 种主食",
+        priority: "required",
+      });
+    }
+
+    if (proteins.length === 0) {
+      requiredNeeds.push({
+        category: "蛋白质不足",
+        reason: "早餐、午餐和晚餐需要肉类或蛋奶作为蛋白质来源",
+        priority: "required",
+      });
+    }
+
+    if (vegetables.length < 2) {
+      requiredNeeds.push({
+        category: "蔬菜不足",
+        reason: "午餐需要 2 份蔬菜，晚餐也需要蔬菜搭配",
+        priority: "required",
+      });
+    }
+
+    if (fruits.length === 0) {
+      optionalNeeds.push({
+        category: "水果可选补充",
+        reason: "早餐可搭配水果，但不影响生成完整一周菜谱",
+        priority: "optional",
+      });
+    }
+
+    if (requiredNeeds.length > 0) {
+      setRecipeWarning("当前库存不足以生成完整一周菜谱");
+      setShoppingNeeds([...requiredNeeds, ...optionalNeeds]);
+      setWeeklyPlan([]);
+      setHasGenerated(false);
+      return;
+    }
+
     const plan: MealPlan[] = [];
     const today = new Date();
     const availableMethods = getAvailableMethods();
+    const pickIngredient = (items: Ingredient[], index: number) => items[index % items.length];
+    const getMethod = (category: Ingredient["category"]) => {
+      const filteredMethods = availableMethods.filter((method) =>
+        cookingMethods[category]?.includes(method)
+      );
+      return filteredMethods[0] || cookingMethods[category]?.[0] || "简单烹饪";
+    };
 
     for (let i = 0; i < 7; i++) {
       const date = new Date(today);
@@ -357,25 +385,41 @@ export default function InventoryPage() {
       const dayKey = date.toISOString().split("T")[0];
 
       const dayMeals = mealTypes.map((mealType) => {
-        const mealCategory = getMealCategory(mealType);
-        const sortedIngredients = getCategoryIngredients(mealCategory);
-        const usedIngredient = sortedIngredients[0];
-        const fallback = recipeSuggestions[mealCategory]?.[0];
-        const filteredMethods = availableMethods.filter((method) =>
-          cookingMethods[mealCategory]?.includes(method)
-        );
-
-        const method = filteredMethods[0] || cookingMethods[mealCategory]?.[0] || "简单烹饪";
         const timeKey = mealType === "早餐" ? "上午" : mealType === "午餐" ? "下午" : "晚上";
         const tip = settings.hungryTimes.includes(timeKey)
           ? hungryTimeTips[timeKey]?.[0]
           : undefined;
+        const staple = pickIngredient(staples, i);
+        const protein = pickIngredient(proteins, i);
+        const primaryVegetable = pickIngredient(vegetables, i * 2);
+        const secondaryVegetable = pickIngredient(vegetables, i * 2 + 1);
+        const fruit = fruits.length > 0 ? pickIngredient(fruits, i) : null;
+
+        if (mealType === "早餐") {
+          return {
+            type: mealType,
+            main: staple.name,
+            side: fruit ? `${protein.name} + ${fruit.name}` : protein.name,
+            method: getMethod(staple.category),
+            tip,
+          };
+        }
+
+        if (mealType === "午餐") {
+          return {
+            type: mealType,
+            main: `${primaryVegetable.name} + ${secondaryVegetable.name}`,
+            side: `${protein.name} + ${staple.name}`,
+            method: getMethod(protein.category),
+            tip,
+          };
+        }
 
         return {
           type: mealType,
-          main: usedIngredient?.name || fallback?.main || "暂无食材",
-          side: fallback?.side || "-",
-          method,
+          main: primaryVegetable.name,
+          side: `${protein.name} + ${staple.name}（主食可选）`,
+          method: getMethod(primaryVegetable.category),
           tip,
         };
       });
@@ -387,6 +431,8 @@ export default function InventoryPage() {
       });
     }
 
+    setRecipeWarning("");
+    setShoppingNeeds(optionalNeeds);
     setWeeklyPlan(plan);
     setHasGenerated(true);
   };
@@ -819,6 +865,39 @@ export default function InventoryPage() {
               生成一周菜谱
             </Button>
           </div>
+
+          {(recipeWarning || shoppingNeeds.length > 0) && (
+            <Card className={recipeWarning ? "border-amber-300 bg-amber-50" : "border-blue-200 bg-blue-50"}>
+              <CardHeader className="pb-3">
+                <CardTitle className={`flex items-center gap-2 ${recipeWarning ? "text-amber-700" : "text-blue-700"}`}>
+                  <AlertTriangle className="h-5 w-5" />
+                  {recipeWarning || "补货建议"}
+                </CardTitle>
+                <CardDescription className={recipeWarning ? "text-amber-700/80" : "text-blue-700/80"}>
+                  {recipeWarning
+                    ? "请先补齐核心食材，再生成一周三餐安排"
+                    : "当前库存可以生成菜谱，以下食材可按需补充"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {shoppingNeeds.map((need) => (
+                    <div
+                      key={need.category}
+                      className={`rounded-lg border p-3 ${
+                        need.priority === "required"
+                          ? "border-amber-200 bg-white/70"
+                          : "border-blue-200 bg-white/70"
+                      }`}
+                    >
+                      <div className="font-medium text-zinc-900">{need.category}</div>
+                      <div className="mt-1 text-sm leading-snug text-zinc-600">{need.reason}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {hasGenerated && weeklyPlan.length > 0 && (
             <Tabs defaultValue="menu" className="recipe-results-tabs w-full">
