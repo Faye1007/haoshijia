@@ -28,7 +28,8 @@ haoshijia/
 │   │       ├── exercise/page.tsx    # 运动记录
 │   │       ├── review/page.tsx      # 独立复盘页面
 │   │       ├── inventory/page.tsx   # 食材库存
-│   │       └── recipe/page.tsx      # 菜谱生成
+│   │       ├── recipe/page.tsx      # 菜谱生成
+│   │       └── profile/page.tsx     # 个人资料
 │   ├── components/
 │   │   ├── AuthRequiredDialog.tsx   # 未登录写入动作登录提醒弹窗
 │   │   ├── Providers.tsx            # 全局 Provider 组合
@@ -40,6 +41,7 @@ haoshijia/
 │       ├── auth.ts                  # Firebase Auth 工具函数
 │       ├── firebase.ts              # Firebase 初始化
 │       ├── firestore.ts             # Firestore 数据访问函数
+│       ├── profile.ts               # 用户展示名和头像首字母工具
 │       ├── review.ts                # 日复盘、周复盘分析逻辑
 │       └── utils.ts                 # cn() 等通用工具
 ├── memory-bank/                     # 产品、架构、进度和修改计划
@@ -66,6 +68,7 @@ haoshijia/
 | 食材与菜谱 | `/dashboard/inventory` | 已实现食材 CRUD、一周菜谱生成和条件设置 |
 | 菜谱生成兼容跳转 | `/dashboard/recipe` | 兼容旧入口，自动跳转到 `/dashboard/inventory?tab=recipe` |
 | 复盘页 | `/dashboard/review` | 已实现独立日复盘和周复盘 |
+| 个人资料 | `/dashboard/profile` | 已实现昵称、身高、性别、出生年份和活动水平保存 |
 
 ## 前端架构
 
@@ -75,6 +78,8 @@ haoshijia/
 - 登录/注册成功后直接进入仪表盘；布局仍使用 `AuthContext` 用户并兜底读取 `auth.currentUser` 展示已登录账号，避免认证状态同步期间误显示游客态。
 - 侧边栏导航已将目标设定合并到体重记录入口，体重记录页同时承担体重记录、趋势查看和目标设置。
 - 侧边栏导航已将食材库存和菜谱生成合并为“食材与菜谱”入口，页面内使用 Tab 组织食材库存、一周菜谱和条件设置。
+- 侧边栏已新增“个人资料”入口，个人资料页用于保存昵称和基础身体资料；未登录用户可只读浏览，写入时仍使用 `AuthRequiredDialog` 拦截。
+- 顶部栏和仪表盘欢迎语优先使用用户昵称，未设置时回退邮箱；右上角昵称和头像区域可点击跳转到 `/dashboard/profile`。
 - 首页、仪表盘和体重、围度、饮食、运动记录页共用 `RecordPrincipleNotice`，提示记录用于复盘、请尽量真实填写、历史记录暂不支持修改；今日误录仍按各页面已有能力删除或重新记录，不扩展任意历史编辑能力。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
 - 全局视觉风格已升级为冰蓝玻璃感：
@@ -129,6 +134,11 @@ users/{userId}
 
 - `email`
 - `createdAt`
+- `nickname`
+- `heightCm`
+- `gender`
+- `birthYear`
+- `activityLevel`
 - `currentWeight`
 - `targetWeight`
 - `targetDate`

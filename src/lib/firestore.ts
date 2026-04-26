@@ -16,6 +16,11 @@ export interface UserProfile {
   id: string;
   email: string;
   createdAt: Date;
+  nickname?: string;
+  heightCm?: number;
+  gender?: string;
+  birthYear?: number;
+  activityLevel?: string;
   currentWeight?: number;
   targetWeight?: number;
   targetDate?: Date;
@@ -39,15 +44,21 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       id: userSnap.id,
       email: data.email,
       createdAt: data.createdAt?.toDate() || new Date(),
+      nickname: data.nickname || undefined,
+      heightCm: data.heightCm ?? undefined,
+      gender: data.gender || undefined,
+      birthYear: data.birthYear ?? undefined,
+      activityLevel: data.activityLevel || undefined,
       currentWeight: data.currentWeight,
       targetWeight: data.targetWeight,
       targetDate: data.targetDate?.toDate(),
+      recipeSettings: data.recipeSettings,
     };
   }
   return null;
 };
 
-export const updateUserProfile = async (userId: string, data: Partial<UserProfile>) => {
+export const updateUserProfile = async (userId: string, data: Record<string, unknown>) => {
   const userRef = doc(db, "users", userId);
   await setDoc(userRef, data, { merge: true });
 };

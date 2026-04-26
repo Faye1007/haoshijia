@@ -2,10 +2,12 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { firebaseSignOut } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
+import { getUserProfile, type UserProfile } from "@/lib/firestore";
+import { getProfileDisplayName, getProfileInitial } from "@/lib/profile";
 import { Button } from "@/components/ui/button";
 
 const navItems = [
@@ -16,6 +18,7 @@ const navItems = [
   { href: "/dashboard/exercise", label: "运动记录", icon: "Activity" },
   { href: "/dashboard/review", label: "复盘", icon: "BarChart" },
   { href: "/dashboard/inventory", label: "食材与菜谱", icon: "Package" },
+  { href: "/dashboard/profile", label: "个人资料", icon: "User" },
 ];
 
 const icons: Record<string, string> = {
@@ -27,6 +30,7 @@ const icons: Record<string, string> = {
   BarChart: "M18 20V10M12 20V4M6 20v-6",
   Target: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20M12 12m-1 0a1 1 0 1 0 2 0 1 1 0 1 0-2 0M12 12m-7 0a7 7 0 1 0 14 0 7 7 0 0 0-14 0",
   Package: "M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12",
+  User: "M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8",
 };
 
 function NavIcon({ name }: { name: string }) {
@@ -53,7 +57,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const activeUser = user ?? auth.currentUser;
+  const displayName = getProfileDisplayName(profile, activeUser?.email);
+  const displayInitial = getProfileInitial(displayName);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfile() {
+      if (!activeUser) {
+        setProfile(null);
+        return;
+      }
+
+      const profileData = await getUserProfile(activeUser.uid);
+      if (isMounted) {
+        setProfile(profileData);
+      }
+    }
+
+    loadProfile();
+    window.addEventListener("haoshijia-profile-updated", loadProfile);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("haoshijia-profile-updated", loadProfile);
+    };
+  }, [activeUser]);
 
   const handleSignOut = async () => {
     await firebaseSignOut();
@@ -194,14 +225,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="dashboard-content flex-1 flex flex-col lg:ml-56">
         <header className="dashboard-header flex h-14 items-center justify-end border-b border-sky-100/80 bg-white/60 px-4 shadow-[0_10px_34px_rgba(14,116,144,0.06)] backdrop-blur-2xl md:px-6">
           {activeUser ? (
-            <div className="flex items-center gap-3">
-              <span className="hidden text-sm text-slate-600 sm:inline">{activeUser.email}</span>
+            <a
+              href="/dashboard/profile"
+              className="flex items-center gap-3 rounded-full px-2 py-1 transition-colors hover:bg-sky-50/80"
+              aria-label="编辑个人资料"
+            >
+              <span className="hidden text-sm text-slate-600 sm:inline">{displayName}</span>
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 shadow-[0_8px_22px_rgba(14,165,233,0.24)]">
                 <span className="text-sm font-medium text-white">
-                  {activeUser.email?.charAt(0).toUpperCase()}
+                  {displayInitial}
                 </span>
               </div>
-            </div>
+            </a>
           ) : (
             <div className="flex items-center gap-2">
               <span className="hidden rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1 text-sm text-sky-800 sm:inline">

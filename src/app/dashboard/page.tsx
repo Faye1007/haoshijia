@@ -4,14 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import { useAuth } from "@/contexts/AuthContext";
-import { getLatestDisplayWeight, getUserProfile, type DisplayWeight } from "@/lib/firestore";
+import { getLatestDisplayWeight, getUserProfile, type DisplayWeight, type UserProfile } from "@/lib/firestore";
+import { getProfileDisplayName } from "@/lib/profile";
 import { useEffect, useState } from "react";
 import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp } from "lucide-react";
-
-interface UserProfile {
-  currentWeight?: number;
-  targetWeight?: number;
-}
 
 const quickActions = [
   {
@@ -106,6 +102,7 @@ export default function DashboardPage() {
 
   const visibleProfile = user ? profile : null;
   const visibleDisplayWeight = user ? displayWeight : null;
+  const displayName = getProfileDisplayName(visibleProfile, user?.email);
   const remainingWeight = visibleProfile?.targetWeight && visibleDisplayWeight
     ? visibleDisplayWeight.weight - visibleProfile.targetWeight
     : null;
@@ -166,7 +163,7 @@ export default function DashboardPage() {
       <div>
         <h2 className="text-2xl font-bold text-zinc-900 pt-8 lg:pt-0">仪表盘</h2>
         <p className="text-zinc-500">
-          {user ? `欢迎回来 ${user.email}` : "当前为只读浏览，登录后可开始记录"}
+          {user ? `欢迎回来 ${displayName}` : "当前为只读浏览，登录后可开始记录"}
         </p>
       </div>
 

@@ -89,6 +89,11 @@
 users/{userId}
   - email
   - createdAt
+  - nickname
+  - heightCm
+  - gender
+  - birthYear
+  - activityLevel
   - currentWeight
   - targetWeight
   - targetDate
