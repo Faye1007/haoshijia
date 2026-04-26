@@ -19,7 +19,7 @@ import {
   type UserProfile,
 } from "@/lib/firestore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Scale, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { ChevronDown, ChevronUp, Scale, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
 
 interface TodayRecord {
   id: string;
@@ -31,6 +31,11 @@ interface TodayRecord {
 interface HistoryPoint {
   date: string;
   weight: number;
+}
+
+interface ChartPoint {
+  date: string;
+  weight: number | null;
 }
 
 interface GoalFormData {
@@ -55,6 +60,7 @@ export default function WeightPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [goalSaveSuccess, setGoalSaveSuccess] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [isGoalFormOpen, setIsGoalFormOpen] = useState(false);
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -226,10 +232,29 @@ export default function WeightPage() {
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  const chartData = historyData.map((point) => ({
-    date: formatDate(point.date),
-    weight: point.weight,
-  }));
+  const chartData: ChartPoint[] = (() => {
+    if (viewDays !== 7) {
+      return historyData.map((point) => ({
+        date: formatDate(point.date),
+        weight: point.weight,
+      }));
+    }
+
+    const historyByDate = new Map(historyData.map((point) => [point.date, point.weight]));
+    const todayDate = new Date(today);
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(todayDate);
+      date.setDate(todayDate.getDate() - (6 - index));
+      const dateStr = date.toISOString().split("T")[0];
+
+      return {
+        date: formatDate(dateStr),
+        weight: historyByDate.get(dateStr) ?? null,
+      };
+    });
+  })();
+  const hasChartData = chartData.some((point) => point.weight !== null);
 
   const current = parseFloat(goalFormData.currentWeight);
   const target = parseFloat(goalFormData.targetWeight);
@@ -354,6 +379,108 @@ export default function WeightPage() {
         </Card>
       </div>
 
+      <form id="goal-settings" onSubmit={handleGoalSubmit}>
+        <Card>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>体重目标</CardTitle>
+              <CardDescription>在这里设置初始体重、目标体重和目标日期</CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsGoalFormOpen((open) => !open)}
+            >
+              {isGoalFormOpen ? "收起目标设置" : "设置目标"}
+              {isGoalFormOpen ? (
+                <ChevronUp className="ml-2 h-4 w-4" />
+              ) : (
+                <ChevronDown className="ml-2 h-4 w-4" />
+              )}
+            </Button>
+          </CardHeader>
+          {isGoalFormOpen && (
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentWeight">初始体重 (kg)</Label>
+                  <Input
+                    id="currentWeight"
+                    type="number"
+                    step="0.1"
+                    placeholder="例如: 70"
+                    value={goalFormData.currentWeight}
+                    onChange={(e) => handleGoalChange("currentWeight", e.target.value)}
+                  />
+                  {goalErrors.currentWeight && (
+                    <p className="text-sm text-red-500">{goalErrors.currentWeight}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="targetWeight">目标体重 (kg)</Label>
+                  <Input
+                    id="targetWeight"
+                    type="number"
+                    step="0.1"
+                    placeholder="例如: 60"
+                    value={goalFormData.targetWeight}
+                    onChange={(e) => handleGoalChange("targetWeight", e.target.value)}
+                  />
+                  {goalErrors.targetWeight && (
+                    <p className="text-sm text-red-500">{goalErrors.targetWeight}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="targetDate">目标日期</Label>
+                  <Input
+                    id="targetDate"
+                    type="date"
+                    min={today}
+                    value={goalFormData.targetDate}
+                    onChange={(e) => handleGoalChange("targetDate", e.target.value)}
+                  />
+                  {goalErrors.targetDate && (
+                    <p className="text-sm text-red-500">{goalErrors.targetDate}</p>
+                  )}
+                </div>
+              </div>
+
+              {estimatedWeeks && goalFormData.targetDate && (
+                <div className="p-4 bg-zinc-50 rounded-lg grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div>
+                    <div className="text-zinc-500">预计周期</div>
+                    <div className="font-medium">{estimatedWeeks} 周</div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500">平均每周减重</div>
+                    <div className="font-medium">
+                      {((current - target) / estimatedWeeks).toFixed(1)} kg
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-zinc-500">累计需要减</div>
+                    <div className="font-medium">{(current - target).toFixed(1)} kg</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "保存中..." : "保存目标"}
+                </Button>
+
+                {goalSaveSuccess && (
+                  <p className="text-sm text-green-600">目标保存成功！</p>
+                )}
+              </div>
+            </CardContent>
+          )}
+        </Card>
+      </form>
+
       <Card>
         <CardHeader>
           <CardTitle>记录体重</CardTitle>
@@ -472,7 +599,7 @@ export default function WeightPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {chartData.length > 0 ? (
+          {hasChartData ? (
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -501,6 +628,7 @@ export default function WeightPage() {
                     strokeWidth={2}
                     dot={{ fill: "#18181b", r: 4 }}
                     activeDot={{ r: 6 }}
+                    connectNulls={false}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -512,89 +640,6 @@ export default function WeightPage() {
           )}
         </CardContent>
       </Card>
-
-      <form id="goal-settings" onSubmit={handleGoalSubmit}>
-        <Card>
-          <CardHeader>
-            <CardTitle>体重目标</CardTitle>
-            <CardDescription>填写初始体重、目标体重和目标日期</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentWeight">初始体重 (kg)</Label>
-                <Input
-                  id="currentWeight"
-                  type="number"
-                  step="0.1"
-                  placeholder="例如: 70"
-                  value={goalFormData.currentWeight}
-                  onChange={(e) => handleGoalChange("currentWeight", e.target.value)}
-                />
-                {goalErrors.currentWeight && (
-                  <p className="text-sm text-red-500">{goalErrors.currentWeight}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="targetWeight">目标体重 (kg)</Label>
-                <Input
-                  id="targetWeight"
-                  type="number"
-                  step="0.1"
-                  placeholder="例如: 60"
-                  value={goalFormData.targetWeight}
-                  onChange={(e) => handleGoalChange("targetWeight", e.target.value)}
-                />
-                {goalErrors.targetWeight && (
-                  <p className="text-sm text-red-500">{goalErrors.targetWeight}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="targetDate">目标日期</Label>
-                <Input
-                  id="targetDate"
-                  type="date"
-                  min={today}
-                  value={goalFormData.targetDate}
-                  onChange={(e) => handleGoalChange("targetDate", e.target.value)}
-                />
-                {goalErrors.targetDate && (
-                  <p className="text-sm text-red-500">{goalErrors.targetDate}</p>
-                )}
-              </div>
-            </div>
-
-            {estimatedWeeks && goalFormData.targetDate && (
-              <div className="p-4 bg-zinc-50 rounded-lg grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div>
-                  <div className="text-zinc-500">预计周期</div>
-                  <div className="font-medium">{estimatedWeeks} 周</div>
-                </div>
-                <div>
-                  <div className="text-zinc-500">平均每周减重</div>
-                  <div className="font-medium">
-                    {((current - target) / estimatedWeeks).toFixed(1)} kg
-                  </div>
-                </div>
-                <div>
-                  <div className="text-zinc-500">累计需要减</div>
-                  <div className="font-medium">{(current - target).toFixed(1)} kg</div>
-                </div>
-              </div>
-            )}
-
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "保存中..." : "保存目标"}
-            </Button>
-
-            {goalSaveSuccess && (
-              <p className="text-sm text-green-600">目标保存成功！</p>
-            )}
-          </CardContent>
-        </Card>
-      </form>
       <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );

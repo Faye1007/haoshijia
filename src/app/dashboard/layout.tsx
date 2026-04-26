@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Menu, X } from "lucide-react";
 import { firebaseSignOut } from "@/lib/auth";
 import { auth } from "@/lib/firebase";
@@ -58,7 +58,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const activeUser = user ?? auth.currentUser;
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+  const activeUser = user ?? (hasMounted ? auth.currentUser : null);
   const displayName = getProfileDisplayName(profile, activeUser?.email);
   const displayInitial = getProfileInitial(displayName);
 
