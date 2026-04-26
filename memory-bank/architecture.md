@@ -62,7 +62,7 @@ haoshijia/
 | 仪表盘 | `/dashboard` | 已实现，支持未登录只读浏览，今日体重已从体重记录子集合同步 |
 | 体重记录与目标 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图、顶部目标摘要和折叠目标设置 |
 | 目标设定兼容跳转 | `/dashboard/goal` | 兼容旧入口，自动跳转到 `/dashboard/weight#goal-settings` |
-| 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、移动端紧凑摘要和今日记录删除 |
+| 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、最近有效摘要、移动端紧凑摘要和今日记录删除 |
 | 饮食记录 | `/dashboard/food` | 已实现饮食记录、日复盘、周复盘、周计划 |
 | 运动记录 | `/dashboard/exercise` | 已实现运动记录、自定义运动量单位和旧分钟数据兼容 |
 | 食材与菜谱 | `/dashboard/inventory` | 已实现食材 CRUD、一周菜谱生成和条件设置 |
@@ -168,6 +168,7 @@ records/{userId}/daily/{date}/exercise/{recordId}
 - `deleteDailyRecord`
 - `getLatestDisplayWeight`
 - `getWeightHistory`
+- `getLatestMeasurementSummary`
 - `getMeasurementHistory`
 - `getFoodHistory`
 - `addExerciseRecord`
@@ -183,6 +184,13 @@ records/{userId}/daily/{date}/exercise/{recordId}
 - 体重记录页与仪表盘使用同一套展示口径：今日/最新体重、初始体重、目标体重和剩余差距。
 - 体重目标设置写入 `users/{userId}` 的 `currentWeight`、`targetWeight`、`targetDate` 字段，不迁移既有用户资料结构。
 - 体重页 7 天趋势固定生成今天和过去 6 天的日期刻度；缺失日期使用空值，不显示为 0，也不跨缺失日期连线。30 天趋势保留按已有记录展示。
+
+围度摘要显示规则：
+
+- 围度页顶部摘要不只读取今日记录，而是通过 `getLatestMeasurementSummary` 分别回看腰围、臀围、大腿围、上臂围最近 90 天内的有效值。
+- 每个围度字段独立计算最近有效记录日期；今天没有记录但历史有值时，摘要显示历史最近值并标注“最近记录：YYYY-MM-DD”。
+- 单项没有有效记录时显示“未记录”，不使用 `0 cm` 表达空值。
+- 围度变化计算只比较有效记录，避免空字段或旧记录中的 0 值参与变化。
 
 运动记录字段：
 

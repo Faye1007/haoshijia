@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, deleteDailyRecord, getDailyRecords, getMeasurementHistory } from "@/lib/firestore";
+import {
+  addDailyRecord,
+  deleteDailyRecord,
+  getDailyRecords,
+  getLatestMeasurementSummary,
+  getMeasurementHistory,
+  type LatestMeasurementSummary,
+} from "@/lib/firestore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Ruler, TrendingDown, TrendingUp, Minus, Trash2 } from "lucide-react";
 
@@ -36,6 +43,8 @@ interface HistoryPoint {
   thigh: number;
   upperArm: number;
 }
+
+type MeasurementKey = keyof LatestMeasurementSummary;
 
 const measurementLabels: Record<string, string> = {
   waist: "腰围",
@@ -63,6 +72,12 @@ export default function MeasurementsPage() {
   const [showHint, setShowHint] = useState(false);
   const [todayRecords, setTodayRecords] = useState<TodayRecord[]>([]);
   const [historyData, setHistoryData] = useState<HistoryPoint[]>([]);
+  const [latestSummary, setLatestSummary] = useState<LatestMeasurementSummary>({
+    waist: null,
+    hip: null,
+    thigh: null,
+    upperArm: null,
+  });
   const [viewDays, setViewDays] = useState<number>(7);
   const [recordToDelete, setRecordToDelete] = useState<TodayRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -71,12 +86,7 @@ export default function MeasurementsPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    loadTodayRecords();
-    loadHistory();
-  }, [user, viewDays]);
-
-  const loadTodayRecords = async () => {
+  const loadTodayRecords = useCallback(async () => {
     setIsLoading(true);
     if (!user) {
       setTodayRecords([]);
@@ -94,13 +104,36 @@ export default function MeasurementsPage() {
     }));
     setTodayRecords(formatted);
     setIsLoading(false);
-  };
+  }, [today, user]);
 
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     if (!user) return;
     const history = await getMeasurementHistory(user.uid, viewDays);
     setHistoryData(history);
-  };
+  }, [user, viewDays]);
+
+  const loadLatestSummary = useCallback(async () => {
+    if (!user) {
+      setLatestSummary({
+        waist: null,
+        hip: null,
+        thigh: null,
+        upperArm: null,
+      });
+      return;
+    }
+
+    const summary = await getLatestMeasurementSummary(user.uid);
+    setLatestSummary(summary);
+  }, [user]);
+
+  const refreshMeasurementData = useCallback(async () => {
+    await Promise.all([loadTodayRecords(), loadHistory(), loadLatestSummary()]);
+  }, [loadHistory, loadLatestSummary, loadTodayRecords]);
+
+  useEffect(() => {
+    refreshMeasurementData();
+  }, [refreshMeasurementData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,8 +178,7 @@ export default function MeasurementsPage() {
       setUpperArm("");
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      loadTodayRecords();
-      loadHistory();
+      refreshMeasurementData();
     } catch (err) {
       console.error("保存失败:", err);
       setError("保存失败，请重试");
@@ -169,7 +201,7 @@ export default function MeasurementsPage() {
     try {
       await deleteDailyRecord(user.uid, today, "measurement", recordToDelete.id);
       setRecordToDelete(null);
-      await Promise.all([loadTodayRecords(), loadHistory()]);
+      await refreshMeasurementData();
     } catch (err) {
       console.error("删除失败:", err);
       setError("删除失败，请重试");
@@ -178,15 +210,12 @@ export default function MeasurementsPage() {
     }
   };
 
-  const getLatestRecord = () => {
-    if (todayRecords.length === 0) return null;
-    return todayRecords[0];
-  };
+  const getMeasurementChange = (key: MeasurementKey) => {
+    const validRecords = historyData.filter((point) => point[key] > 0);
+    if (validRecords.length < 2) return null;
 
-  const getMeasurementChange = (key: string) => {
-    if (historyData.length < 2) return null;
-    const first = historyData[0][key as keyof HistoryPoint] as number;
-    const last = historyData[historyData.length - 1][key as keyof HistoryPoint] as number;
+    const first = validRecords[0][key];
+    const last = validRecords[validRecords.length - 1][key];
     if (first && last) return (last - first).toFixed(1);
     return null;
   };
@@ -219,8 +248,6 @@ export default function MeasurementsPage() {
     thigh: point.thigh || undefined,
     upperArm: point.upperArm || undefined,
   }));
-
-  const latestRecord = getLatestRecord();
 
   const renderChangeIcon = (change: string | null) => {
     if (!change) return <Minus className="h-5 w-5 text-zinc-400" />;
@@ -268,7 +295,10 @@ export default function MeasurementsPage() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-        {["waist", "hip", "thigh", "upperArm"].map((key) => (
+        {(["waist", "hip", "thigh", "upperArm"] as MeasurementKey[]).map((key) => {
+          const summary = latestSummary[key];
+
+          return (
           <Card key={key}>
             <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium text-zinc-500">
@@ -279,16 +309,20 @@ export default function MeasurementsPage() {
               <div className="flex items-center gap-2">
                 <Ruler className="h-4 w-4 sm:h-5 sm:w-5 text-zinc-400 shrink-0" />
                 <span className="text-lg sm:text-2xl font-bold">
-                  {latestRecord
-                    ? `${latestRecord[key as keyof typeof latestRecord]} cm`
-                    : "--"}
+                  {summary ? `${summary.value} cm` : "未记录"}
                 </span>
               </div>
+              {summary && (
+                <div className="mt-1 text-xs text-zinc-500">
+                  最近记录：{summary.date}
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
 
-        {["waist", "hip", "thigh", "upperArm"].map((key) => (
+        {(["waist", "hip", "thigh", "upperArm"] as MeasurementKey[]).map((key) => (
           <Card key={`${key}-change`}>
             <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium text-zinc-500">

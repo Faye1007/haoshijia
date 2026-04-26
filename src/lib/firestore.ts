@@ -177,6 +177,18 @@ export interface MeasurementRecord {
   createdAt: Date;
 }
 
+export interface LatestMeasurementValue {
+  value: number;
+  date: string;
+}
+
+export interface LatestMeasurementSummary {
+  waist: LatestMeasurementValue | null;
+  hip: LatestMeasurementValue | null;
+  thigh: LatestMeasurementValue | null;
+  upperArm: LatestMeasurementValue | null;
+}
+
 export const getWeightHistory = async (
   userId: string,
   days: number = 30
@@ -213,6 +225,50 @@ export const getWeightHistory = async (
   }
 
   return records.reverse();
+};
+
+export const getLatestMeasurementSummary = async (
+  userId: string,
+  days: number = 90
+): Promise<LatestMeasurementSummary> => {
+  const summary: LatestMeasurementSummary = {
+    waist: null,
+    hip: null,
+    thigh: null,
+    upperArm: null,
+  };
+  const fields: (keyof LatestMeasurementSummary)[] = ["waist", "hip", "thigh", "upperArm"];
+  const today = new Date();
+
+  for (let i = 0; i < days; i++) {
+    if (fields.every((field) => summary[field])) break;
+
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+
+    const recordRef = collection(db, "records", userId, "daily", dateStr, "measurement");
+    const q = query(recordRef, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+
+    for (const recordDoc of snapshot.docs) {
+      const data = recordDoc.data();
+
+      fields.forEach((field) => {
+        if (summary[field]) return;
+
+        const value = data[field];
+        if (typeof value === "number" && value > 0) {
+          summary[field] = {
+            value,
+            date: dateStr,
+          };
+        }
+      });
+    }
+  }
+
+  return summary;
 };
 
 export const getMeasurementHistory = async (
