@@ -174,7 +174,7 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <h2 className="pt-8 text-2xl font-bold text-zinc-900 lg:pt-0">个人资料</h2>
-        <p className="text-zinc-500">设置日常称呼，并为后续 BMI 和营养目标预留基础资料</p>
+        <p className="text-zinc-500">设置日常称呼，并补充 BMI 和营养目标需要的基础资料</p>
       </div>
 
       {!user && (
@@ -228,7 +228,7 @@ export default function ProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle>身体基础资料</CardTitle>
-            <CardDescription>这些字段先用于资料沉淀，后续会用于 BMI 和轻量营养目标。</CardDescription>
+            <CardDescription>这些字段会用于仪表盘 BMI 计算，后续也会用于轻量营养目标。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

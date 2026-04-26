@@ -14,7 +14,7 @@ import {
 } from "@/lib/firestore";
 import { getProfileDisplayName } from "@/lib/profile";
 import { useEffect, useState } from "react";
-import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp, Ruler } from "lucide-react";
+import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp, Ruler, UserRound } from "lucide-react";
 
 const quickActions = [
   {
@@ -66,6 +66,26 @@ const secondaryMeasurementKeys: (keyof LatestMeasurementSummary)[] = [
   "thigh",
   "upperArm",
 ];
+
+const genderLabels: Record<string, string> = {
+  female: "女",
+  male: "男",
+  other: "其他 / 不便说明",
+};
+
+const activityLabels: Record<string, string> = {
+  low: "久坐为主",
+  light: "轻度活动",
+  moderate: "中等活动",
+  active: "较高活动",
+};
+
+const getBmiStatus = (bmi: number) => {
+  if (bmi < 18.5) return "偏低";
+  if (bmi < 24) return "正常";
+  if (bmi < 28) return "偏高";
+  return "较高";
+};
 
 function ActionCard({ action }: { action: typeof quickActions[0] }) {
   return (
@@ -149,6 +169,39 @@ export default function DashboardPage() {
     ? visibleDisplayWeight.weight - visibleProfile.targetWeight
     : null;
   const hasMeasurementRecord = Object.values(visibleMeasurementSummary).some(Boolean);
+  const bmiWeight = visibleDisplayWeight?.weight ?? visibleProfile?.currentWeight ?? null;
+  const bmi = visibleProfile?.heightCm && bmiWeight
+    ? bmiWeight / ((visibleProfile.heightCm / 100) ** 2)
+    : null;
+  const age = visibleProfile?.birthYear
+    ? new Date().getFullYear() - visibleProfile.birthYear
+    : null;
+  const hasBodyProfile = Boolean(
+    visibleProfile?.heightCm ||
+    visibleProfile?.gender ||
+    visibleProfile?.birthYear ||
+    visibleProfile?.activityLevel
+  );
+  const bodyOverviewItems = [
+    {
+      label: "身高",
+      value: visibleProfile?.heightCm ? `${visibleProfile.heightCm} cm` : "未填写",
+    },
+    {
+      label: "年龄",
+      value: age && age > 0 ? `${age} 岁` : "未填写",
+    },
+    {
+      label: "性别",
+      value: visibleProfile?.gender ? genderLabels[visibleProfile.gender] || "已填写" : "未填写",
+    },
+    {
+      label: "活动水平",
+      value: visibleProfile?.activityLevel
+        ? activityLabels[visibleProfile.activityLevel] || "已填写"
+        : "未填写",
+    },
+  ];
 
   const quickGuides = [
     { icon: Scale, title: "记录体重", desc: "晨起空腹称重最准确", href: "/dashboard/weight" },
@@ -265,6 +318,46 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>身体概览</CardTitle>
+          <CardDescription>基于个人资料和最近体重计算，仅作为记录参考</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {bmi || hasBodyProfile ? (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-4">
+              <div className="rounded-lg border border-teal-200 bg-teal-50/70 p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-teal-700">
+                  <UserRound className="h-4 w-4" />
+                  BMI
+                </div>
+                <div className="mt-3 text-3xl font-bold text-zinc-900">
+                  {bmi ? bmi.toFixed(1) : "无法计算"}
+                </div>
+                <div className="mt-1 text-xs text-zinc-500">
+                  {bmi
+                    ? `${getBmiStatus(bmi)} · 使用${visibleDisplayWeight ? "最近体重" : "初始体重"} ${bmiWeight} kg`
+                    : "需要填写身高，并至少有一条体重数据"}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {bodyOverviewItems.map((item) => (
+                  <div key={item.label} className="rounded-lg border border-zinc-200 bg-white/60 p-4">
+                    <div className="text-sm text-zinc-500">{item.label}</div>
+                    <div className="mt-2 text-lg font-bold text-zinc-900">{item.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-zinc-200 bg-white/50 p-4 text-sm text-zinc-500">
+              暂无身体基础资料。前往个人资料填写身高、出生年份、性别和活动水平后，仪表盘会显示 BMI 和身体概览。
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
