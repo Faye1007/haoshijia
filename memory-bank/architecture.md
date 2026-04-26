@@ -74,6 +74,11 @@ haoshijia/
 - 侧边栏导航已将目标设定合并到体重记录入口，体重记录页同时承担体重记录、趋势查看和目标设置。
 - 侧边栏导航已将食材库存和菜谱生成合并为“食材与菜谱”入口，页面内使用 Tab 组织食材库存、一周菜谱和条件设置。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
+- 全局视觉风格已升级为冰蓝玻璃感：
+  - `src/app/globals.css` 定义冷白、浅蓝灰、蓝青色主基调，以及 `app-aurora-bg` 背景。
+  - dashboard shell、侧边栏、顶部栏和移动端菜单按钮使用半透明背景、细边框、柔和阴影和 `backdrop-blur`。
+  - Card、Button、Input、Select、Tabs、Dialog、Sheet、Dropdown、Toast、Checkbox 等基础 UI 组件统一采用冰蓝玻璃质感。
+  - 打印样式仍集中在 `globals.css` 的 `@media print` 中，保持白底、隐藏后台导航，并只放行菜谱打印区域。
 - 图表使用 Recharts。
 - 图标使用 lucide-react，部分导航图标当前仍为内联 SVG path。
 - 日复盘和周复盘分析逻辑集中在 `src/lib/review.ts`，饮食记录页与独立复盘页共用同一套计算规则。

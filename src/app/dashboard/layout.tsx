@@ -61,11 +61,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="dashboard-shell min-h-screen flex">
+    <div className="dashboard-shell app-aurora-bg min-h-screen flex text-slate-900">
       {/* Mobile menu button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="dashboard-mobile-toggle fixed top-4 left-4 z-50 lg:hidden p-2 bg-white rounded-md shadow-md"
+        className="dashboard-mobile-toggle fixed top-4 left-4 z-50 rounded-md border border-sky-100/80 bg-white/75 p-2 text-sky-900 shadow-[0_10px_30px_rgba(14,116,144,0.14)] backdrop-blur-xl lg:hidden"
       >
         {sidebarOpen ? (
           <X className="h-5 w-5" />
@@ -75,9 +75,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </button>
 
       {/* Sidebar - desktop */}
-      <aside className="dashboard-sidebar hidden lg:flex w-56 bg-white border-r border-zinc-200 flex-col fixed h-full">
-        <div className="p-4 border-b border-zinc-200">
-          <h1 className="text-xl font-bold text-zinc-800">好食家</h1>
+      <aside className="dashboard-sidebar fixed hidden h-full w-56 flex-col border-r border-sky-100/80 bg-white/70 shadow-[12px_0_40px_rgba(14,116,144,0.08)] backdrop-blur-2xl lg:flex">
+        <div className="border-b border-sky-100/80 p-4">
+          <h1 className="text-xl font-bold text-sky-950">好食家</h1>
+          <p className="mt-1 text-xs text-cyan-700">记录 · 复盘 · 计划</p>
         </div>
         <nav className="flex-1 p-2 space-y-1">
           {navItems.map((item) => {
@@ -88,8 +89,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-zinc-100 text-zinc-900"
-                    : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                    ? "border border-sky-100 bg-sky-100/80 text-sky-950 shadow-sm"
+                    : "text-slate-600 hover:bg-sky-50/80 hover:text-sky-900"
                 }`}
               >
                 <NavIcon name={item.icon} />
@@ -99,10 +100,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
         {activeUser ? (
-          <div className="p-2 border-t border-zinc-200">
+          <div className="border-t border-sky-100/80 p-2">
             <button
               onClick={handleSignOut}
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 w-full transition-colors"
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-sky-50/80 hover:text-sky-900"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -121,7 +122,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
           </div>
         ) : (
-          <div className="p-2 border-t border-zinc-200 text-xs text-zinc-500">
+          <div className="border-t border-sky-100/80 p-3 text-xs text-slate-500">
             登录后可保存记录
           </div>
         )}
@@ -134,9 +135,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className="absolute inset-0 bg-black/50"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="relative w-56 bg-white h-full flex flex-col">
-            <div className="p-4 border-b border-zinc-200">
-              <h1 className="text-xl font-bold text-zinc-800">好食家</h1>
+          <div className="relative flex h-full w-56 flex-col border-r border-sky-100/80 bg-white/90 shadow-[12px_0_40px_rgba(14,116,144,0.16)] backdrop-blur-2xl">
+            <div className="border-b border-sky-100/80 p-4">
+              <h1 className="text-xl font-bold text-sky-950">好食家</h1>
+              <p className="mt-1 text-xs text-cyan-700">记录 · 复盘 · 计划</p>
             </div>
             <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
@@ -148,8 +150,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       isActive
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                        ? "border border-sky-100 bg-sky-100/80 text-sky-950 shadow-sm"
+                        : "text-slate-600 hover:bg-sky-50/80 hover:text-sky-900"
                     }`}
                   >
                     <NavIcon name={item.icon} />
@@ -159,10 +161,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               })}
             </nav>
             {activeUser ? (
-              <div className="p-2 border-t border-zinc-200">
+              <div className="border-t border-sky-100/80 p-2">
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 w-full transition-colors"
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-sky-50/80 hover:text-sky-900"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </button>
               </div>
             ) : (
-              <div className="p-2 border-t border-zinc-200 text-xs text-zinc-500">
+              <div className="border-t border-sky-100/80 p-3 text-xs text-slate-500">
                 登录后可保存记录
               </div>
             )}
@@ -190,19 +192,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       <div className="dashboard-content flex-1 flex flex-col lg:ml-56">
-        <header className="dashboard-header h-14 bg-white border-b border-zinc-200 flex items-center justify-end px-4 md:px-6">
+        <header className="dashboard-header flex h-14 items-center justify-end border-b border-sky-100/80 bg-white/60 px-4 shadow-[0_10px_34px_rgba(14,116,144,0.06)] backdrop-blur-2xl md:px-6">
           {activeUser ? (
             <div className="flex items-center gap-3">
-              <span className="text-sm text-zinc-600 hidden sm:inline">{activeUser.email}</span>
-              <div className="h-8 w-8 rounded-full bg-zinc-200 flex items-center justify-center">
-                <span className="text-sm font-medium text-zinc-600">
+              <span className="hidden text-sm text-slate-600 sm:inline">{activeUser.email}</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-sky-500 to-cyan-400 shadow-[0_8px_22px_rgba(14,165,233,0.24)]">
+                <span className="text-sm font-medium text-white">
                   {activeUser.email?.charAt(0).toUpperCase()}
                 </span>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <span className="hidden text-sm text-zinc-500 sm:inline">当前为只读浏览</span>
+              <span className="hidden rounded-full border border-sky-100 bg-sky-50/80 px-3 py-1 text-sm text-sky-800 sm:inline">
+                当前为只读浏览
+              </span>
               <Button variant="ghost" size="sm" asChild>
                 <a href="/login">登录</a>
               </Button>
@@ -212,7 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           )}
         </header>
-        <main className="dashboard-main flex-1 bg-zinc-50 p-4 md:p-6">{children}</main>
+        <main className="dashboard-main flex-1 bg-transparent p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

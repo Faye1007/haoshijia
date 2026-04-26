@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -126,7 +126,7 @@ const defaultSettings: UserSettings = {
   preferredMethods: ["炒制", "蒸煮"],
 };
 
-export default function InventoryPage() {
+function InventoryPageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "inventory");
@@ -1233,5 +1233,13 @@ export default function InventoryPage() {
       </Dialog>
       <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={<div className="py-8 text-center text-slate-500">加载中...</div>}>
+      <InventoryPageContent />
+    </Suspense>
   );
 }

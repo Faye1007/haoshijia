@@ -2,32 +2,98 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --background: #eef8ff;
+    --foreground: #0f172a;
+    --card: rgb(255 255 255 / 0.74);
+    --card-foreground: #0f172a;
+    --popover: rgb(255 255 255 / 0.88);
+    --popover-foreground: #0f172a;
+    --primary: #0284c7;
+    --primary-foreground: #f8fbff;
+    --secondary: #e0f2fe;
+    --secondary-foreground: #075985;
+    --muted: #eaf6ff;
+    --muted-foreground: #64748b;
+    --accent: #ccfbf1;
+    --accent-foreground: #0f766e;
+    --destructive: #ef4444;
+    --destructive-foreground: #fff7ed;
+    --border: rgb(186 230 253 / 0.72);
+    --input: rgb(186 230 253 / 0.72);
+    --ring: #0891b2;
     --radius: 0.5rem;
   }
 }
 
+html {
+  min-height: 100%;
+  background: #eef8ff;
+}
+
 body {
-  background: var(--background);
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 12% 8%, rgb(125 211 252 / 0.34), transparent 28rem),
+    radial-gradient(circle at 86% 12%, rgb(45 212 191 / 0.22), transparent 24rem),
+    linear-gradient(135deg, #f8fbff 0%, #eef8ff 45%, #e8f3ff 100%);
   color: var(--foreground);
+}
+
+::selection {
+  background: rgb(125 211 252 / 0.45);
+  color: #0f172a;
+}
+
+.app-aurora-bg {
+  background:
+    radial-gradient(circle at 12% 10%, rgb(125 211 252 / 0.42), transparent 28rem),
+    radial-gradient(circle at 86% 16%, rgb(45 212 191 / 0.26), transparent 25rem),
+    radial-gradient(circle at 70% 86%, rgb(191 219 254 / 0.38), transparent 30rem),
+    linear-gradient(135deg, #f8fbff 0%, #eef8ff 46%, #e5f3ff 100%);
+}
+
+.dashboard-main .bg-zinc-50 {
+  background-color: rgb(240 249 255 / 0.72);
+}
+
+.dashboard-main .bg-zinc-100 {
+  background-color: rgb(224 242 254 / 0.74);
+}
+
+.dashboard-main .bg-zinc-200 {
+  background-color: rgb(186 230 253 / 0.72);
+}
+
+.dashboard-main .bg-zinc-900 {
+  background-color: #0369a1;
+}
+
+.dashboard-main .border-zinc-200 {
+  border-color: rgb(186 230 253 / 0.82);
+}
+
+.dashboard-main .text-zinc-900 {
+  color: #0f172a;
+}
+
+.dashboard-main .text-zinc-800 {
+  color: #1e3a5f;
+}
+
+.dashboard-main .text-zinc-700 {
+  color: #28506f;
+}
+
+.dashboard-main .text-zinc-600 {
+  color: #3f6f8f;
+}
+
+.dashboard-main .text-zinc-500 {
+  color: #64748b;
+}
+
+.dashboard-main .text-zinc-400 {
+  color: #38bdf8;
 }
 
 .print-only {

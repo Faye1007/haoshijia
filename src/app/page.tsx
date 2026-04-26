@@ -16,13 +16,13 @@ export default function Home() {
   }, [user, loading, router]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-4">
+    <div className="app-aurora-bg min-h-screen p-4">
       <main className="mx-auto flex min-h-screen max-w-4xl flex-col items-center justify-center text-center">
         <div className="space-y-6">
           <div className="space-y-3">
-            <h1 className="text-4xl font-bold text-zinc-900 sm:text-5xl">好食家</h1>
-            <p className="text-lg text-zinc-600">减脂记录 · 行为复盘 · 菜谱计划</p>
-            <p className="mx-auto max-w-2xl text-sm leading-6 text-zinc-500">
+            <h1 className="text-4xl font-bold text-sky-950 sm:text-5xl">好食家</h1>
+            <p className="text-lg text-cyan-700">减脂记录 · 行为复盘 · 菜谱计划</p>
+            <p className="mx-auto max-w-2xl text-sm leading-6 text-slate-600">
               你可以先进入应用浏览功能结构。需要保存体重、饮食、运动、食材或个人计划时，再登录或注册账号。
             </p>
           </div>

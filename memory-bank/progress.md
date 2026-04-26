@@ -1,5 +1,31 @@
 # 进度记录
 
+## Step 30: 冰蓝玻璃感视觉升级 ✅ (完成日期: 2026-04-26)
+
+### 完成内容
+- 全局视觉从黑白灰后台模板感升级为冷白、浅蓝灰、蓝青色主基调。
+- `globals.css` 新增冰蓝渐变背景、选中文本样式和 dashboard 内部浅蓝灰覆盖规则。
+- dashboard shell、侧边栏、顶部栏、移动端菜单按钮改为半透明玻璃质感、细边框和柔和阴影。
+- 首页、登录页、注册页同步使用冰蓝背景，保持公开入口和账号入口视觉一致。
+- Card、Button、Input、Select、Tabs、Dialog、Sheet、Dropdown、Toast、Checkbox 等基础 UI 组件统一为冰蓝玻璃感。
+- 保持记录工具的信息密度，不改动核心页面业务流程。
+- 修复 `/dashboard/inventory` 在生产构建中的 `useSearchParams()` Suspense 要求，避免 Next.js 预渲染失败。
+
+### 验证结果
+- 用户验证测试通过 ✅
+- `npx tsc --noEmit` 通过 ✅
+- `npm run lint` 无 error，仅剩 4 个既有 hook dependency warning ✅
+- `npm run build` 通过 ✅
+- 本地使用 `npm run dev -- --port 3001` 可正常启动 webpack 开发服务，`/`、`/dashboard`、`/dashboard/inventory` 均返回 `200 OK` ✅
+
+### Git 提交
+- 本次提交包含 Step 30 视觉升级、生产构建修复与对应文档更新。
+
+### 后续步骤
+- Step 31: 真实记录原则提示
+
+---
+
 ## Step 29: 未登录用户完整只读浏览 ✅ (完成日期: 2026-04-26)
 
 ### 完成内容
