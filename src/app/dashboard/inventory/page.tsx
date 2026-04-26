@@ -67,6 +67,11 @@ interface ShoppingNeed {
   priority: "required" | "optional";
 }
 
+interface IngredientPoolItem {
+  ingredient: Ingredient;
+  remainingServings: number | null;
+}
+
 const categories = [
   { value: "肉类", label: "肉类", color: "bg-red-100 text-red-700" },
   { value: "主食", label: "主食", color: "bg-amber-100 text-amber-700" },
@@ -357,6 +362,50 @@ function InventoryPageContent() {
       .sort((a, b) => a.remainingDays - b.remainingDays);
   };
 
+  const getServingCapacity = (items: Ingredient[]) => {
+    if (items.length === 0) return 0;
+    if (items.some((item) => typeof item.servings !== "number" || item.servings <= 0)) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return items.reduce((total, item) => total + (item.servings || 0), 0);
+  };
+
+  const formatCapacityNeed = (capacity: number, required: number) => {
+    if (!Number.isFinite(capacity)) return "";
+    return `当前可用约 ${capacity} 顿，完整一周至少需要 ${required} 顿`;
+  };
+
+  const createIngredientPool = (items: Ingredient[]): IngredientPoolItem[] => {
+    return items.map((ingredient) => ({
+      ingredient,
+      remainingServings:
+        typeof ingredient.servings === "number" && ingredient.servings > 0
+          ? ingredient.servings
+          : null,
+    }));
+  };
+
+  const pickIngredientFromPool = (
+    pool: IngredientPoolItem[],
+    excludeIds: string[] = []
+  ): Ingredient | null => {
+    const availableItems = pool.filter((item) => {
+      const hasServingsLeft = item.remainingServings === null || item.remainingServings > 0;
+      return hasServingsLeft && !excludeIds.includes(item.ingredient.id);
+    });
+    const candidates = availableItems.length > 0
+      ? availableItems
+      : pool.filter((item) => item.remainingServings === null || item.remainingServings > 0);
+
+    if (candidates.length === 0) return null;
+
+    const selected = candidates.sort((a, b) => a.ingredient.remainingDays - b.ingredient.remainingDays)[0];
+    if (selected.remainingServings !== null) {
+      selected.remainingServings -= 1;
+    }
+    return selected.ingredient;
+  };
+
   const generateWeeklyPlan = () => {
     const staples = getCategoryIngredients("主食");
     const vegetables = getCategoryIngredients("蔬菜");
@@ -364,6 +413,10 @@ function InventoryPageContent() {
     const proteins = ingredients
       .filter((item) => item.category === "肉类" || item.category === "蛋奶")
       .sort((a, b) => a.remainingDays - b.remainingDays);
+    const stapleCapacity = getServingCapacity(staples);
+    const proteinCapacity = getServingCapacity(proteins);
+    const vegetableCapacity = getServingCapacity(vegetables);
+    const fruitCapacity = getServingCapacity(fruits);
     const requiredNeeds: ShoppingNeed[] = [];
     const optionalNeeds: ShoppingNeed[] = [];
 
@@ -371,6 +424,12 @@ function InventoryPageContent() {
       requiredNeeds.push({
         category: "主食不足",
         reason: "早餐和午餐需要至少 1 种主食",
+        priority: "required",
+      });
+    } else if (stapleCapacity < 14) {
+      requiredNeeds.push({
+        category: "主食顿数不足",
+        reason: formatCapacityNeed(stapleCapacity, 14),
         priority: "required",
       });
     }
@@ -381,12 +440,24 @@ function InventoryPageContent() {
         reason: "早餐、午餐和晚餐需要肉类或蛋奶作为蛋白质来源",
         priority: "required",
       });
+    } else if (proteinCapacity < 21) {
+      requiredNeeds.push({
+        category: "蛋白质顿数不足",
+        reason: formatCapacityNeed(proteinCapacity, 21),
+        priority: "required",
+      });
     }
 
     if (vegetables.length < 2) {
       requiredNeeds.push({
-        category: "蔬菜不足",
+        category: "蔬菜种类不足",
         reason: "午餐需要 2 份蔬菜，晚餐也需要蔬菜搭配",
+        priority: "required",
+      });
+    } else if (vegetableCapacity < 21) {
+      requiredNeeds.push({
+        category: "蔬菜顿数不足",
+        reason: formatCapacityNeed(vegetableCapacity, 21),
         priority: "required",
       });
     }
@@ -395,6 +466,12 @@ function InventoryPageContent() {
       optionalNeeds.push({
         category: "水果可选补充",
         reason: "早餐可搭配水果，但不影响生成完整一周菜谱",
+        priority: "optional",
+      });
+    } else if (fruitCapacity < 7) {
+      optionalNeeds.push({
+        category: "水果顿数较少",
+        reason: formatCapacityNeed(fruitCapacity, 7) || "早餐水果可按库存灵活搭配",
         priority: "optional",
       });
     }
@@ -410,7 +487,10 @@ function InventoryPageContent() {
     const plan: MealPlan[] = [];
     const today = new Date();
     const availableMethods = getAvailableMethods();
-    const pickIngredient = (items: Ingredient[], index: number) => items[index % items.length];
+    const staplePool = createIngredientPool(staples);
+    const proteinPool = createIngredientPool(proteins);
+    const vegetablePool = createIngredientPool(vegetables);
+    const fruitPool = createIngredientPool(fruits);
     const getMethod = (category: Ingredient["category"]) => {
       const filteredMethods = availableMethods.filter((method) =>
         cookingMethods[category]?.includes(method)
@@ -429,37 +509,51 @@ function InventoryPageContent() {
         const tip = settings.hungryTimes.includes(timeKey)
           ? hungryTimeTips[timeKey]?.[0]
           : undefined;
-        const staple = pickIngredient(staples, i);
-        const protein = pickIngredient(proteins, i);
-        const primaryVegetable = pickIngredient(vegetables, i * 2);
-        const secondaryVegetable = pickIngredient(vegetables, i * 2 + 1);
-        const fruit = fruits.length > 0 ? pickIngredient(fruits, i) : null;
 
         if (mealType === "早餐") {
+          const staple = pickIngredientFromPool(staplePool);
+          const protein = pickIngredientFromPool(proteinPool);
+          const fruit = pickIngredientFromPool(fruitPool);
+
           return {
             type: mealType,
-            main: staple.name,
-            side: fruit ? `${protein.name} + ${fruit.name}` : protein.name,
-            method: getMethod(staple.category),
+            main: staple?.name || "-",
+            side: [protein?.name, fruit?.name].filter(Boolean).join(" + ") || "-",
+            method: staple ? getMethod(staple.category) : "简单烹饪",
             tip,
           };
         }
 
         if (mealType === "午餐") {
+          const primaryVegetable = pickIngredientFromPool(vegetablePool);
+          const secondaryVegetable = pickIngredientFromPool(
+            vegetablePool,
+            primaryVegetable ? [primaryVegetable.id] : []
+          );
+          const protein = pickIngredientFromPool(proteinPool);
+          const staple = pickIngredientFromPool(staplePool);
+
           return {
             type: mealType,
-            main: `${primaryVegetable.name} + ${secondaryVegetable.name}`,
-            side: `${protein.name} + ${staple.name}`,
-            method: getMethod(protein.category),
+            main: [primaryVegetable?.name, secondaryVegetable?.name].filter(Boolean).join(" + ") || "-",
+            side: [protein?.name, staple?.name].filter(Boolean).join(" + ") || "-",
+            method: protein ? getMethod(protein.category) : "简单烹饪",
             tip,
           };
         }
 
+        const primaryVegetable = pickIngredientFromPool(vegetablePool);
+        const protein = pickIngredientFromPool(proteinPool);
+        const optionalStaple = pickIngredientFromPool(staplePool);
+
         return {
           type: mealType,
-          main: primaryVegetable.name,
-          side: `${protein.name} + ${staple.name}（主食可选）`,
-          method: getMethod(primaryVegetable.category),
+          main: primaryVegetable?.name || "-",
+          side: [
+            protein?.name,
+            optionalStaple ? `${optionalStaple.name}（主食可选）` : null,
+          ].filter(Boolean).join(" + ") || "-",
+          method: primaryVegetable ? getMethod(primaryVegetable.category) : "简单烹饪",
           tip,
         };
       });
