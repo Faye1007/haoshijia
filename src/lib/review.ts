@@ -1,6 +1,7 @@
 export interface FoodReviewRecord {
   id: string;
   mealType: string;
+  mealTime?: string;
   foodDescription: string;
   portion: number;
   hungerLevel: number;

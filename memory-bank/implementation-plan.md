@@ -785,6 +785,18 @@
 - 完成后更新 `memory-bank/progress.md`。
 - 更新 `memory-bank/architecture.md` 中饮食记录字段说明。
 
+**完成说明**：
+- 已完成，完成日期：2026-04-26。
+- 用户验证测试通过。
+- 饮食记录表单已新增进食时间，默认填入当前时间。
+- 保存饮食记录时写入 `mealTime`，并保留餐次 `mealType`。
+- 今日记录列表优先显示进食时间；旧记录没有 `mealTime` 时回退显示创建时间。
+- 扩展 `FoodRecord` 和 `FoodReviewRecord` 类型，周复盘读取继续兼容新旧记录。
+- 重构饮食页加载逻辑，消除该页面原有 hook dependency warning。
+- `npx tsc --noEmit` 通过。
+- `npm run lint` 通过，无 warning。
+- `npm run build` 通过。
+
 ---
 
 ### Step 36: 仪表盘增加围度概览

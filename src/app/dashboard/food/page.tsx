@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -55,9 +55,17 @@ const emotions = [
 
 type TodayRecord = FoodReviewRecord;
 
+const getCurrentTimeValue = () => {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+};
+
 export default function FoodPage() {
   const { user } = useAuth();
   const [selectedMealType, setSelectedMealType] = useState<MealType>("breakfast");
+  const [mealTime, setMealTime] = useState(getCurrentTimeValue);
   const [foodDescription, setFoodDescription] = useState("");
   const [portion, setPortion] = useState("");
   const [hungerLevel, setHungerLevel] = useState<number>(3);
@@ -80,17 +88,13 @@ export default function FoodPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  useEffect(() => {
-    if (!user) return;
-    loadTodayRecords();
-  }, [user]);
-
-  const loadTodayRecords = async () => {
+  const loadTodayRecords = useCallback(async () => {
     if (!user) return;
     const records = await getFoodHistory(user.uid, today);
     const formatted: TodayRecord[] = records.map((r) => ({
       id: r.id,
       mealType: r.mealType,
+      mealTime: r.mealTime,
       foodDescription: r.foodDescription,
       portion: r.portion,
       hungerLevel: r.hungerLevel,
@@ -100,7 +104,12 @@ export default function FoodPage() {
       createdAt: r.createdAt,
     }));
     setTodayRecords(formatted);
-  };
+  }, [today, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadTodayRecords();
+  }, [loadTodayRecords, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +129,7 @@ export default function FoodPage() {
     try {
       await addDailyRecord(user.uid, today, "food", {
         mealType: selectedMealType,
+        mealTime,
         foodDescription,
         portion: portion ? parseInt(portion) : 0,
         hungerLevel,
@@ -127,6 +137,7 @@ export default function FoodPage() {
         emotion: emotion || "unknown",
         feeling,
       });
+      setMealTime(getCurrentTimeValue());
       setFoodDescription("");
       setPortion("");
       setHungerLevel(3);
@@ -135,7 +146,7 @@ export default function FoodPage() {
       setFeeling("");
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-      loadTodayRecords();
+      await loadTodayRecords();
     } catch (err) {
       console.error("保存失败:", err);
       setError("保存失败，请重试");
@@ -148,6 +159,10 @@ export default function FoodPage() {
     return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
   };
 
+  const getRecordDisplayTime = (record: TodayRecord) => {
+    return record.mealTime || formatTime(record.createdAt);
+  };
+
   const getRecordsByMealType = (mealType: string) => {
     return todayRecords.filter((r) => r.mealType === mealType);
   };
@@ -158,7 +173,7 @@ export default function FoodPage() {
     ).length;
   };
 
-  const loadWeeklyData = async () => {
+  const loadWeeklyData = useCallback(async () => {
     if (!user) return;
     setIsLoadingWeekly(true);
     try {
@@ -170,15 +185,15 @@ export default function FoodPage() {
     } finally {
       setIsLoadingWeekly(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (activeTab === "weekly" && !weeklyData) {
       loadWeeklyData();
     }
-  }, [activeTab]);
+  }, [activeTab, loadWeeklyData, weeklyData]);
 
-  const loadPlans = async () => {
+  const loadPlans = useCallback(async () => {
     if (!user) return;
     setIsLoadingPlans(true);
     try {
@@ -189,13 +204,13 @@ export default function FoodPage() {
     } finally {
       setIsLoadingPlans(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     if (activeTab === "plans" && plans.length === 0) {
       loadPlans();
     }
-  }, [activeTab]);
+  }, [activeTab, loadPlans, plans.length]);
 
   const getNextWeekId = (startDate: Date): string => {
     const year = startDate.getFullYear();
@@ -487,7 +502,17 @@ export default function FoodPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mealTime">进食时间</Label>
+                  <Input
+                    id="mealTime"
+                    type="time"
+                    value={mealTime}
+                    onChange={(e) => setMealTime(e.target.value)}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="foodDescription">食物描述</Label>
                   <Input
@@ -613,8 +638,9 @@ export default function FoodPage() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="font-medium">{record.foodDescription}</span>
-                            <span className="text-sm text-zinc-500">
-                              {formatTime(record.createdAt)}
+                            <span className="flex items-center gap-1 text-sm text-zinc-500">
+                              <Clock className="h-3 w-3" />
+                              {getRecordDisplayTime(record)}
                             </span>
                           </div>
                           <div className="flex flex-wrap gap-3 text-sm text-zinc-500">

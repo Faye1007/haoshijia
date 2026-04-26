@@ -305,6 +305,7 @@ export const getMeasurementHistory = async (
 export interface FoodRecord {
   id: string;
   mealType: string;
+  mealTime?: string;
   foodDescription: string;
   portion: number;
   hungerLevel: number;
@@ -314,6 +315,19 @@ export interface FoodRecord {
   createdAt: Date;
 }
 
+const normalizeFoodRecord = (id: string, data: Record<string, unknown>): FoodRecord => ({
+  id,
+  mealType: data.mealType as string,
+  mealTime: typeof data.mealTime === "string" ? data.mealTime : undefined,
+  foodDescription: data.foodDescription as string,
+  portion: data.portion as number,
+  hungerLevel: data.hungerLevel as number,
+  triggerReason: data.triggerReason as string,
+  emotion: data.emotion as string,
+  feeling: data.feeling as string,
+  createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(),
+});
+
 export const getFoodHistory = async (
   userId: string,
   date: string
@@ -322,20 +336,7 @@ export const getFoodHistory = async (
   const q = query(recordRef, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
   
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      mealType: data.mealType as string,
-      foodDescription: data.foodDescription as string,
-      portion: data.portion as number,
-      hungerLevel: data.hungerLevel as number,
-      triggerReason: data.triggerReason as string,
-      emotion: data.emotion as string,
-      feeling: data.feeling as string,
-      createdAt: data.createdAt?.toDate() || new Date(),
-    };
-  });
+  return snapshot.docs.map((doc) => normalizeFoodRecord(doc.id, doc.data()));
 };
 
 export interface ExerciseRecord {
@@ -445,18 +446,7 @@ export const getWeeklyData = async (
     const foodQ = query(foodRef, orderBy("createdAt", "desc"));
     const foodSnap = await getDocs(foodQ);
     foodSnap.docs.forEach((doc) => {
-      const data = doc.data();
-      foodData.push({
-        id: doc.id,
-        mealType: data.mealType as string,
-        foodDescription: data.foodDescription as string,
-        portion: data.portion as number,
-        hungerLevel: data.hungerLevel as number,
-        triggerReason: data.triggerReason as string,
-        emotion: data.emotion as string,
-        feeling: data.feeling as string,
-        createdAt: data.createdAt?.toDate() || new Date(),
-      });
+      foodData.push(normalizeFoodRecord(doc.id, doc.data()));
     });
 
     const exerciseRef = collection(db, "records", userId, "daily", dateStr, "exercise");

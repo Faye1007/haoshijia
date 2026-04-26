@@ -24,7 +24,7 @@ haoshijia/
 │   │       ├── goal/page.tsx        # 目标设定
 │   │       ├── weight/page.tsx      # 体重记录
 │   │       ├── measurements/page.tsx # 围度记录
-│   │       ├── food/page.tsx        # 饮食记录、日/周复盘、周计划
+│   │       ├── food/page.tsx        # 饮食记录、进食时间、日/周复盘、周计划
 │   │       ├── exercise/page.tsx    # 运动记录
 │   │       ├── review/page.tsx      # 独立复盘页面
 │   │       ├── inventory/page.tsx   # 食材库存
@@ -63,7 +63,7 @@ haoshijia/
 | 体重记录与目标 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图、顶部目标摘要和折叠目标设置 |
 | 目标设定兼容跳转 | `/dashboard/goal` | 兼容旧入口，自动跳转到 `/dashboard/weight#goal-settings` |
 | 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、最近有效摘要、移动端紧凑摘要和今日记录删除 |
-| 饮食记录 | `/dashboard/food` | 已实现饮食记录、日复盘、周复盘、周计划 |
+| 饮食记录 | `/dashboard/food` | 已实现饮食记录、进食时间、日复盘、周复盘、周计划 |
 | 运动记录 | `/dashboard/exercise` | 已实现运动记录、自定义运动量单位和旧分钟数据兼容 |
 | 食材与菜谱 | `/dashboard/inventory` | 已实现食材 CRUD、一周菜谱生成和条件设置 |
 | 菜谱生成兼容跳转 | `/dashboard/recipe` | 兼容旧入口，自动跳转到 `/dashboard/inventory?tab=recipe` |
@@ -191,6 +191,17 @@ records/{userId}/daily/{date}/exercise/{recordId}
 - 每个围度字段独立计算最近有效记录日期；今天没有记录但历史有值时，摘要显示历史最近值并标注“最近记录：YYYY-MM-DD”。
 - 单项没有有效记录时显示“未记录”，不使用 `0 cm` 表达空值。
 - 围度变化计算只比较有效记录，避免空字段或旧记录中的 0 值参与变化。
+
+饮食记录字段：
+
+- `mealType`：餐次，当前支持早餐、午餐、晚餐、上午加餐、下午加餐、晚上加餐。
+- `mealTime`：实际进食时间，格式为 `HH:mm`；旧记录可能没有该字段，界面展示时回退到 `createdAt` 创建时间。
+- `foodDescription`：食物描述。
+- `portion`：份量，单位克，未填写时为 0。
+- `hungerLevel`：饥饿评分，1-5。
+- `triggerReason`：触发原因，未选择时写入 `unknown`。
+- `emotion`：情绪状态，未选择时写入 `unknown`。
+- `feeling`：吃后感受。
 
 运动记录字段：
 

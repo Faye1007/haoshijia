@@ -114,6 +114,7 @@ records/{userId}/daily/{date}/measurement/{recordId}
 
 records/{userId}/daily/{date}/food/{recordId}
   - mealType
+  - mealTime
   - foodDescription
   - portion
   - hungerLevel
