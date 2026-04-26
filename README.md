@@ -1,36 +1,83 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 好食家
 
-## Getting Started
+好食家是一个个人减脂记录与复盘网页应用，用来记录体重、围度、饮食、运动和食材库存，并基于日常记录生成复盘与一周菜谱建议。
 
-First, run the development server:
+这个项目来自我的个人使用需求：减脂过程中，仅记录数据并不足够，真正有价值的是从记录中发现行为模式，并把复盘结果转化为下一步可以执行的调整。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 在线体验
+
+项目已部署到 Vercel。访问线上版本后，可以注册测试账号体验主要功能。
+
+> 如果线上版本正在部署或 Firebase 配置调整中，可能需要稍后刷新重试。
+
+## 核心功能
+
+- 体重记录与目标管理：记录每日体重，展示今日/最新体重、初始体重、目标体重和剩余差距。
+- 围度记录：记录腰围、臀围、大腿围、上臂围，支持趋势查看和今日记录删除。
+- 饮食记录：按早餐、午餐、晚餐和加餐记录食物、份量、饥饿程度、触发原因和情绪状态。
+- 运动记录：支持分钟、步数、公里、次数、组数、圈数和自定义单位。
+- 日复盘与周复盘：根据饮食、体重、围度和运动记录生成执行度、高风险场景和下周策略。
+- 食材库存与菜谱生成：管理食材库存，并按库存和基础搭配规则生成一周三餐。
+- 菜谱导出：支持将当前一周菜谱通过浏览器打印或保存为 PDF。
+
+## 产品思路
+
+好食家的核心不是简单记录，而是建立一个轻量闭环：
+
+```text
+记录数据 -> 识别模式 -> 生成复盘 -> 调整下一步计划
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+因此项目里有几类设计取舍：
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- 把目标设定合并进体重记录页，减少在相关任务之间来回切换。
+- 把食材库存和菜谱生成合并到同一页面，让菜谱直接读取最新库存。
+- 菜谱生成只使用用户录入的食材，库存不足时不强行生成完整菜单，而是提示需要补充的食材类别。
+- 复盘页面独立出来，让“看见问题”和“形成下一步策略”成为核心入口。
+- 移动端记录流程尽量压缩操作成本，因为体重、饮食和运动记录通常发生在碎片场景。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 技术栈
 
-## Learn More
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui
+- Firebase Authentication
+- Cloud Firestore
+- Vercel
 
-To learn more about Next.js, take a look at the following resources:
+## 技术实现要点
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 使用 Firebase Auth 管理邮箱密码登录和登录态保护。
+- 使用 Firestore 子集合存储每日体重、围度、饮食和运动记录。
+- 将日复盘、周复盘分析逻辑抽象到独立模块，供饮食页和复盘页复用。
+- 在食材与菜谱页面中使用同一份菜单数据驱动表格、九宫格和日历三种视图。
+- 使用打印专用样式控制菜谱导出范围，隐藏导航、按钮和表单，只保留当前菜单内容。
+- 保留旧路由兼容跳转，避免页面合并后出现旧入口 404。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 本地运行
 
-## Deploy on Vercel
+```bash
+npm install
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+打开浏览器访问：
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+http://localhost:3000
+```
+
+项目依赖 Firebase。若要完整运行登录、注册和数据读写功能，需要配置 Firebase 项目，并在 `src/lib/firebase.ts` 中使用对应的客户端配置。
+
+## 项目状态
+
+这是一个个人使用中的减脂记录与复盘网页应用，目前仍在持续迭代中。项目已实现核心记录、复盘、食材库存和菜谱生成流程，后续会继续根据真实使用体验优化移动端记录效率、复盘分析质量和菜谱规划能力。
+
+## 后续计划
+
+- 优化移动端高频记录体验。
+- 继续改进复盘分析规则，让输出建议更具体。
+- 增强菜谱生成对库存数量、保质期和个人偏好的利用。
+- 补充更系统的测试和错误状态处理。
