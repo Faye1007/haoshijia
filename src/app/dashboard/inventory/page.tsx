@@ -146,6 +146,7 @@ function InventoryPageContent() {
   const [category, setCategory] = useState<string>("肉类");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState<string>("克");
+  const [servings, setServings] = useState("");
   const [remainingDays, setRemainingDays] = useState("");
   const [error, setError] = useState("");
 
@@ -198,6 +199,7 @@ function InventoryPageContent() {
     setCategory("肉类");
     setQuantity("");
     setUnit("克");
+    setServings("");
     setRemainingDays("");
     setError("");
   };
@@ -214,6 +216,16 @@ function InventoryPageContent() {
       return null;
     }
 
+    let servingsValue: number | null = null;
+    if (servings.trim()) {
+      const parsedServings = parseInt(servings, 10);
+      if (isNaN(parsedServings) || parsedServings <= 0) {
+        setError("请输入有效的可用顿数");
+        return null;
+      }
+      servingsValue = parsedServings;
+    }
+
     const days = parseInt(remainingDays);
     if (isNaN(days) || days < 0) {
       setError("请输入有效的剩余天数");
@@ -225,6 +237,7 @@ function InventoryPageContent() {
       category: category as Ingredient["category"],
       quantity: qty,
       unit,
+      servings: servingsValue,
       remainingDays: days,
     };
   };
@@ -262,6 +275,7 @@ function InventoryPageContent() {
     setCategory(item.category);
     setQuantity(item.quantity.toString());
     setUnit(item.unit);
+    setServings(item.servings?.toString() || "");
     setRemainingDays(item.remainingDays.toString());
     setIsEditDialogOpen(true);
   };
@@ -321,6 +335,12 @@ function InventoryPageContent() {
 
   const getCategoryColor = (cat: string) => {
     return categories.find((c) => c.value === cat)?.color || "bg-zinc-100 text-zinc-700";
+  };
+
+  const formatServings = (item: Ingredient) => {
+    return typeof item.servings === "number" && item.servings > 0
+      ? `可用 ${item.servings} 顿`
+      : "可用顿数未填";
   };
 
   const getAvailableMethods = (): string[] => {
@@ -669,7 +689,7 @@ function InventoryPageContent() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                   <div className="col-span-2 md:col-span-2 space-y-2">
                     <Label htmlFor="name">食材名称</Label>
                     <Input
@@ -719,6 +739,19 @@ function InventoryPageContent() {
                         </SelectContent>
                       </Select>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="servings">可用顿数</Label>
+                    <Input
+                      id="servings"
+                      type="number"
+                      min="1"
+                      step="1"
+                      placeholder="4"
+                      value={servings}
+                      onChange={(e) => setServings(e.target.value)}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -808,6 +841,9 @@ function InventoryPageContent() {
                         <span className="text-sm text-zinc-500">
                           {item.quantity}{item.unit}
                         </span>
+                        <span className="text-sm text-zinc-500">
+                          {formatServings(item)}
+                        </span>
                         {item.remainingDays <= 2 && (
                           <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3" />
@@ -865,7 +901,7 @@ function InventoryPageContent() {
                     >
                       <div className="font-medium text-zinc-900">{item.name}</div>
                       <div className="text-sm text-zinc-500">
-                        {item.quantity}{item.unit} · 剩{item.remainingDays}天
+                        {item.quantity}{item.unit} · {formatServings(item)} · 剩{item.remainingDays}天
                       </div>
                     </div>
                   ))}
@@ -1202,6 +1238,17 @@ function InventoryPageContent() {
             <div className="space-y-2">
               <Label>剩余天数</Label>
               <Input type="number" value={remainingDays} onChange={(e) => setRemainingDays(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>可用顿数</Label>
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="选填，例如 4"
+                value={servings}
+                onChange={(e) => setServings(e.target.value)}
+              />
             </div>
           </div>
           <DialogFooter>

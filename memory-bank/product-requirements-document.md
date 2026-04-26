@@ -145,6 +145,7 @@ ingredients/{userId}/items/{ingredientId}
   - category
   - quantity
   - unit
+  - servings
   - remainingDays
   - userId
   - createdAt
@@ -154,7 +155,7 @@ ingredients/{userId}/items/{ingredientId}
 
 - 独立复盘页面尚未实现，当前复盘内容主要在饮食记录页内即时生成。
 - 后续如果需要持久化复盘结果，可再引入 `reviews/{userId}/weekly/{weekId}`。
-- 运动记录后续计划从固定 `duration` 扩展为“运动量数值 + 单位”，详见 `modification-plan.md`。
+- `ingredients.servings` 为可选字段，旧食材没有该字段时继续兼容显示。
 
 ---
 

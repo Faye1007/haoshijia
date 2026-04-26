@@ -244,6 +244,17 @@ plans/{userId}/weekly/{planId}
 ingredients/{userId}/items/{ingredientId}
 ```
 
+当前字段：
+
+- `name`：食材名称。
+- `category`：食材分类，当前支持肉类、主食、蔬菜、水果、蛋奶、调味品、其他。
+- `quantity`：库存数量。
+- `unit`：数量单位。
+- `servings`：可选，可用顿数，用于表达这份食材计划吃几顿；旧食材可能没有该字段，界面显示为“可用顿数未填”。
+- `remainingDays`：预计剩余可用天数。
+- `userId`
+- `createdAt`
+
 相关函数：
 
 - `addIngredient`
@@ -255,7 +266,9 @@ ingredients/{userId}/items/{ingredientId}
 
 - 菜谱生成与食材库存位于同一页面 `/dashboard/inventory`。
 - 页面 Tab 包括：食材库存、一周菜谱、条件设置。
-- 添加、编辑、删除食材后会刷新同页 `ingredients` 状态，生成一周菜谱时直接读取最新库存。
+- 添加、编辑、删除食材后会刷新同页 `ingredients` 状态，食材列表和一周菜谱页库存卡片都会展示数量、单位、可用顿数和剩余天数。
+- 生成一周菜谱时直接读取最新库存。
+- 当前 `servings` 仅用于库存记录和展示；按可用顿数限制菜谱消耗次数将在 Step 38 实现。
 - 生成菜谱时只使用用户库存中的食材，不再使用系统内置食材作为菜单兜底。
 - 当前基础搭配规则：
   - 早餐：主食 + 蛋白/蛋奶，可选水果。

@@ -536,14 +536,19 @@ export interface Ingredient {
   category: "肉类" | "主食" | "蔬菜" | "水果" | "蛋奶" | "调味品" | "其他";
   quantity: number;
   unit: string;
+  servings?: number;
   remainingDays: number;
   userId: string;
   createdAt: Date;
 }
 
+export type IngredientInput = Omit<Ingredient, "id" | "userId" | "createdAt" | "servings"> & {
+  servings?: number | null;
+};
+
 export const addIngredient = async (
   userId: string,
-  data: Omit<Ingredient, "id" | "userId" | "createdAt">
+  data: IngredientInput
 ) => {
   const ingredientRef = collection(db, "ingredients", userId, "items");
   await addDoc(ingredientRef, {
@@ -568,6 +573,7 @@ export const getIngredients = async (
       category: data.category as Ingredient["category"],
       quantity: data.quantity as number,
       unit: data.unit as string,
+      servings: typeof data.servings === "number" ? data.servings : undefined,
       remainingDays: data.remainingDays as number,
       userId: data.userId as string,
       createdAt: data.createdAt?.toDate() || new Date(),
@@ -578,7 +584,7 @@ export const getIngredients = async (
 export const updateIngredient = async (
   userId: string,
   ingredientId: string,
-  data: Partial<Omit<Ingredient, "id" | "userId" | "createdAt">>
+  data: Partial<IngredientInput>
 ) => {
   const ingredientRef = doc(db, "ingredients", userId, "items", ingredientId);
   await setDoc(ingredientRef, data, { merge: true });
