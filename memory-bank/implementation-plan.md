@@ -1223,10 +1223,100 @@
 - 本地启动 `npm run dev -- --port 3001` 后，`/dashboard/inventory` 返回 `200 OK`。
 - 用户验收通过。
 
+---
+
+## 阶段十五：今日记录删除与移动端布局压缩（待执行）
+
+本阶段来自 2026-04-27 的新反馈。执行时仍需按项目 Step Workflow 在每个 Step 开始前确认范围，完成后先运行验证命令，再等待用户验收。
+
+### Step 49: 体重、饮食、运动补齐今日记录删除 ✅
+**任务目标**：
+- 让体重记录、饮食记录、运动记录像围度记录一样支持删除当天误录。
+- 保持“历史记录不支持修改”的产品原则，不开放今天之前的数据编辑入口。
+
+**修改范围**：
+- `src/app/dashboard/weight/page.tsx`
+  - 引入并使用 `deleteDailyRecord`。
+  - 为今日体重记录增加删除按钮、确认弹窗和删除中状态。
+  - 删除后刷新今日记录、趋势和目标摘要相关数据。
+- `src/app/dashboard/food/page.tsx`
+  - 引入并使用 `deleteDailyRecord`。
+  - 为今日饮食记录每条记录增加删除按钮、确认弹窗和删除中状态。
+  - 删除后刷新今日记录和日复盘摘要。
+- `src/app/dashboard/exercise/page.tsx`
+  - 引入并使用 `deleteDailyRecord`。
+  - 为今日运动记录增加删除按钮、确认弹窗和删除中状态。
+  - 删除后刷新今日运动统计和记录列表。
+
+**边界规则**：
+- 删除函数调用只使用当前页面计算出的 `today`。
+- 不新增历史记录列表的编辑或删除入口。
+- 未登录用户执行删除动作时继续使用 `AuthRequiredDialog` 拦截。
+- 不调整 Firestore 数据结构。
+
+**验证方式**：
+- 运行 `npm run lint`。
+- 运行 `npm run build`。
+- 手动检查三个页面的今日记录删除弹窗、取消、确认和删除后刷新。
+- 手动检查今天之前的历史数据没有修改入口。
+
+**影响文档**：
+- 用户验收通过后更新 `memory-bank/progress.md`。
+- 如删除流程或页面结构有显著调整，同步更新 `memory-bank/architecture.md`。
+
+**完成说明**：
+- 已完成，完成日期：2026-04-27。
+- 体重、饮食、运动三个页面已补齐今日记录删除按钮、确认弹窗和删除中状态。
+- 删除调用只使用当前页面的 `today` 日期，不新增历史记录编辑或删除入口。
+- 删除后分别刷新对应页面的今日列表、统计摘要、趋势或复盘相关数据。
+- 本次复用既有 `deleteDailyRecord`，不修改 Firestore 数据结构。
+- `npm run lint` 通过。
+- `npm run build` 通过。
+- 用户验收通过。
+
+---
+
+### Step 50: 移动端统计卡片与任务卡片空间压缩
+**任务目标**：
+- 减少移动端短摘要卡片的纵向堆叠，让手机端更接近日常高频记录场景。
+- 保持桌面端信息层级和业务逻辑不变。
+
+**修改范围**：
+- `src/app/dashboard/page.tsx`
+  - 今日进度短卡片改为移动端更紧凑排列。
+  - 今日任务四个任务卡移动端使用 2 列 2 行。
+  - 身体概览、围度概览中的短卡片优先移动端 2 列。
+- `src/app/dashboard/weight/page.tsx`
+  - 顶部体重摘要卡片移动端从单列压缩为 2 列。
+  - 目标估算短摘要根据内容长度适当压缩排列。
+- `src/app/dashboard/food/page.tsx`
+  - 日复盘顶部摘要、日复盘内部短卡片、周复盘顶部摘要移动端压缩为 2 列优先。
+- `src/app/dashboard/exercise/page.tsx`
+  - 顶部运动摘要卡片移动端压缩为 2 列优先；长文本统计保留可换行。
+- `src/app/dashboard/review/page.tsx`
+  - 今日复盘和本周复盘摘要卡片移动端压缩为 2 列优先。
+- `src/app/dashboard/measurements/page.tsx`
+  - 已有移动端两列逻辑保留，只做一致性检查，不做无关重构。
+
+**边界规则**：
+- 只调整响应式网格、间距和局部字号。
+- 不改变数据读取、保存、删除、复盘计算逻辑。
+- 不为长正文卡片强行两列，避免文字挤压。
+
+**验证方式**：
+- 运行 `npm run lint`。
+- 运行 `npm run build`。
+- 本地移动端宽度检查 `/dashboard`、`/dashboard/weight`、`/dashboard/food`、`/dashboard/exercise`、`/dashboard/review`。
+- 检查文字不溢出、不重叠，按钮和卡片点击区域仍可用。
+
+**影响文档**：
+- 用户验收通过后更新 `memory-bank/progress.md`。
+- 如页面布局约定有明显变化，同步更新 `memory-bank/architecture.md`。
+
 执行规则：
 
 - Step 22-28 已按顺序完成并记录完成说明。
-- 后续功能开发按新的产品反馈继续拆分，除非遇到明显依赖调整。
+- 后续功能开发按新的产品反馈继续拆分，当前待执行优先级为 Step 50，除非遇到明显依赖调整。
 - 每完成一个 Step，同步更新 `memory-bank/progress.md`，记录完成内容、验证结果和遗留问题。
 - 如果修改页面结构、导航结构、数据结构或核心流程，同步更新 `memory-bank/architecture.md`。
 - `memory-bank/modification-plan.md` 保留为产品级修改说明；本文档作为工程执行顺序说明。

@@ -7,9 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   addDailyRecord,
+  deleteDailyRecord,
   getDailyRecords,
   getLatestDisplayWeight,
   getUserProfile,
@@ -19,7 +28,7 @@ import {
   type UserProfile,
 } from "@/lib/firestore";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { ChevronDown, ChevronUp, Scale, Target, TrendingDown, TrendingUp, Minus } from "lucide-react";
+import { ChevronDown, ChevronUp, Scale, Target, TrendingDown, TrendingUp, Minus, Trash2 } from "lucide-react";
 
 interface TodayRecord {
   id: string;
@@ -66,6 +75,8 @@ export default function WeightPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
   const [viewDays, setViewDays] = useState<number>(7);
+  const [recordToDelete, setRecordToDelete] = useState<TodayRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
   const [goalErrors, setGoalErrors] = useState<GoalFormErrors>({});
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -160,6 +171,29 @@ export default function WeightPage() {
       setError("保存失败，请重试");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!recordToDelete) return;
+    if (!user) {
+      setRecordToDelete(null);
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    setIsDeleting(true);
+    setError("");
+
+    try {
+      await deleteDailyRecord(user.uid, today, "weight", recordToDelete.id);
+      setRecordToDelete(null);
+      await refreshWeightData();
+    } catch (err) {
+      console.error("删除失败:", err);
+      setError("删除失败，请重试");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -552,9 +586,9 @@ export default function WeightPage() {
               {todayRecords.map((record) => (
                 <div
                   key={record.id}
-                  className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg"
+                  className="flex items-center justify-between gap-3 p-3 bg-zinc-50 rounded-lg"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     <Scale className="h-4 w-4 text-zinc-400" />
                     <span className="font-medium">{record.weight} kg</span>
                     {record.isMorning && (
@@ -563,9 +597,21 @@ export default function WeightPage() {
                       </span>
                     )}
                   </div>
-                  <span className="text-sm text-zinc-500">
-                    {formatTime(record.createdAt)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-sm text-zinc-500">
+                      {formatTime(record.createdAt)}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setRecordToDelete(record)}
+                      aria-label={`删除 ${formatTime(record.createdAt)} 的体重记录`}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -640,6 +686,37 @@ export default function WeightPage() {
           )}
         </CardContent>
       </Card>
+      <Dialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除 {recordToDelete ? formatTime(recordToDelete.createdAt) : ""} 的体重记录吗？此操作无法撤销。
+            </DialogDescription>
+          </DialogHeader>
+          {recordToDelete && (
+            <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
+              {recordToDelete.weight} kg{recordToDelete.isMorning ? "，晨起体重" : ""}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecordToDelete(null)}
+              disabled={isDeleting}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "删除中..." : "删除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );

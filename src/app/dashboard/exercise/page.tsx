@@ -8,6 +8,14 @@ import { Label } from "@/components/ui/label";
 import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -15,8 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { addExerciseRecord, getExerciseHistory, ExerciseRecord } from "@/lib/firestore";
-import { Dumbbell, Clock, Flame, Zap } from "lucide-react";
+import { addExerciseRecord, deleteDailyRecord, getExerciseHistory, ExerciseRecord } from "@/lib/firestore";
+import { Dumbbell, Clock, Flame, Zap, Trash2 } from "lucide-react";
 
 const exerciseTypes = [
   { value: "running", label: "跑步" },
@@ -56,6 +64,8 @@ export default function ExercisePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [todayRecords, setTodayRecords] = useState<ExerciseRecord[]>([]);
+  const [recordToDelete, setRecordToDelete] = useState<ExerciseRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
@@ -131,6 +141,29 @@ export default function ExercisePage() {
       setError("保存失败，请重试");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!recordToDelete) return;
+    if (!user) {
+      setRecordToDelete(null);
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    setIsDeleting(true);
+    setError("");
+
+    try {
+      await deleteDailyRecord(user.uid, today, "exercise", recordToDelete.id);
+      setRecordToDelete(null);
+      await loadTodayRecords();
+    } catch (err) {
+      console.error("删除失败:", err);
+      setError("删除失败，请重试");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -349,9 +382,9 @@ export default function ExercisePage() {
               {todayRecords.map((record) => (
                 <div
                   key={record.id}
-                  className="p-4 bg-zinc-50 rounded-lg flex items-center justify-between"
+                  className="p-4 bg-zinc-50 rounded-lg flex items-center justify-between gap-3"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex min-w-0 items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-zinc-200 flex items-center justify-center">
                       <Dumbbell className="h-5 w-5 text-zinc-600" />
                     </div>
@@ -375,15 +408,64 @@ export default function ExercisePage() {
                       </div>
                     </div>
                   </div>
-                  <span className="text-sm text-zinc-500">
-                    {formatTime(record.createdAt)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-sm text-zinc-500">
+                      {formatTime(record.createdAt)}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setRecordToDelete(record)}
+                      aria-label={`删除 ${formatTime(record.createdAt)} 的运动记录`}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
       )}
+      <Dialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除 {recordToDelete ? formatTime(recordToDelete.createdAt) : ""} 的运动记录吗？此操作无法撤销。
+            </DialogDescription>
+          </DialogHeader>
+          {recordToDelete && (
+            <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
+              <div className="font-medium text-zinc-900">
+                {getExerciseLabel(recordToDelete.exerciseType)}
+              </div>
+              <div className="mt-1">
+                {formatExerciseAmount(recordToDelete)}
+                {recordToDelete.calories > 0 ? `，${recordToDelete.calories} kcal` : ""}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecordToDelete(null)}
+              disabled={isDeleting}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "删除中..." : "删除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );

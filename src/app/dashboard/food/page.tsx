@@ -8,6 +8,14 @@ import { Label } from "@/components/ui/label";
 import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import { RecordPrincipleNotice } from "@/components/RecordPrincipleNotice";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -16,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { addDailyRecord, getFoodHistory, getWeeklyData, savePlan, getPlans, updatePlan, deletePlan, type Plan } from "@/lib/firestore";
+import { addDailyRecord, deleteDailyRecord, getFoodHistory, getWeeklyData, savePlan, getPlans, updatePlan, deletePlan, type Plan } from "@/lib/firestore";
 import { generateDailyReview, generateWeeklyReview, getEmotionLabel, getTriggerLabel, getWeekStartDate, type FoodReviewRecord, type WeeklyReviewData } from "@/lib/review";
 import { UtensilsCrossed, Clock, Star, Heart, MessageSquare, TrendingUp, AlertCircle, CheckCircle, Lightbulb, Scale, Ruler, Calendar, Target, Zap, FileText, Trash2, Edit2, Save, X } from "lucide-react";
 
@@ -84,6 +92,8 @@ export default function FoodPage() {
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [recordToDelete, setRecordToDelete] = useState<TodayRecord | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
@@ -192,6 +202,30 @@ export default function FoodPage() {
       loadWeeklyData();
     }
   }, [activeTab, loadWeeklyData, weeklyData]);
+
+  const handleDeleteConfirm = async () => {
+    if (!recordToDelete) return;
+    if (!user) {
+      setRecordToDelete(null);
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    setIsDeleting(true);
+    setError("");
+
+    try {
+      await deleteDailyRecord(user.uid, today, "food", recordToDelete.id);
+      setRecordToDelete(null);
+      await loadTodayRecords();
+      setWeeklyData(null);
+    } catch (err) {
+      console.error("删除失败:", err);
+      setError("删除失败，请重试");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const loadPlans = useCallback(async () => {
     if (!user) return;
@@ -636,12 +670,24 @@ export default function FoodPage() {
                           key={record.id}
                           className="p-3 bg-zinc-50 rounded-lg space-y-2"
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-start justify-between gap-3">
                             <span className="font-medium">{record.foodDescription}</span>
-                            <span className="flex items-center gap-1 text-sm text-zinc-500">
-                              <Clock className="h-3 w-3" />
-                              {getRecordDisplayTime(record)}
-                            </span>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="flex items-center gap-1 text-sm text-zinc-500">
+                                <Clock className="h-3 w-3" />
+                                {getRecordDisplayTime(record)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setRecordToDelete(record)}
+                                aria-label={`删除 ${getRecordDisplayTime(record)} 的饮食记录`}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
                           </div>
                           <div className="flex flex-wrap gap-3 text-sm text-zinc-500">
                             {record.portion > 0 && (
@@ -1050,6 +1096,40 @@ export default function FoodPage() {
           )}
         </TabsContent>
       </Tabs>
+      <Dialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              确定要删除 {recordToDelete ? getRecordDisplayTime(recordToDelete) : ""} 的饮食记录吗？此操作无法撤销。
+            </DialogDescription>
+          </DialogHeader>
+          {recordToDelete && (
+            <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
+              <div className="font-medium text-zinc-900">
+                {mealTypeLabels[recordToDelete.mealType as MealType] || recordToDelete.mealType}
+              </div>
+              <div className="mt-1">{recordToDelete.foodDescription}</div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRecordToDelete(null)}
+              disabled={isDeleting}
+            >
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "删除中..." : "删除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AuthRequiredDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
     </div>
   );
