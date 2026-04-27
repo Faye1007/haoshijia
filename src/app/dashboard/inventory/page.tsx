@@ -286,7 +286,7 @@ function InventoryPageContent() {
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState<string>("克");
   const [servings, setServings] = useState("");
-  const [remainingDays, setRemainingDays] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [error, setError] = useState("");
 
   const [editingItem, setEditingItem] = useState<Ingredient | null>(null);
@@ -347,8 +347,95 @@ function InventoryPageContent() {
     setQuantity("");
     setUnit("克");
     setServings("");
-    setRemainingDays("");
+    setExpiryDate("");
     setError("");
+  };
+
+  const getTodayDateKey = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseDateKey = (dateKey?: string) => {
+    if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const parsedDate = new Date(year, month - 1, day);
+
+    if (
+      parsedDate.getFullYear() !== year ||
+      parsedDate.getMonth() !== month - 1 ||
+      parsedDate.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return parsedDate;
+  };
+
+  const getDaysUntilExpiry = (dateKey?: string) => {
+    const expiry = parseDateKey(dateKey);
+    if (!expiry) return null;
+
+    const today = parseDateKey(getTodayDateKey());
+    if (!today) return null;
+
+    const millisecondsPerDay = 24 * 60 * 60 * 1000;
+    return Math.round((expiry.getTime() - today.getTime()) / millisecondsPerDay);
+  };
+
+  const getExpiryInfo = (item: Ingredient) => {
+    const daysUntilExpiry = getDaysUntilExpiry(item.expiryDate);
+
+    if (daysUntilExpiry === null) {
+      return {
+        status: "missing" as const,
+        label: "需要补充到期日期",
+        sortValue: Number.POSITIVE_INFINITY,
+        badgeClass: "bg-amber-100 text-amber-700",
+      };
+    }
+
+    if (daysUntilExpiry < 0) {
+      return {
+        status: "expired" as const,
+        label: `已过期 ${Math.abs(daysUntilExpiry)} 天`,
+        sortValue: daysUntilExpiry,
+        badgeClass: "bg-red-100 text-red-600",
+      };
+    }
+
+    if (daysUntilExpiry === 0) {
+      return {
+        status: "today" as const,
+        label: "今日到期",
+        sortValue: daysUntilExpiry,
+        badgeClass: "bg-red-100 text-red-600",
+      };
+    }
+
+    if (daysUntilExpiry <= 2) {
+      return {
+        status: "soon" as const,
+        label: `${daysUntilExpiry} 天后到期`,
+        sortValue: daysUntilExpiry,
+        badgeClass: "bg-amber-100 text-amber-700",
+      };
+    }
+
+    return {
+      status: "valid" as const,
+      label: `到期 ${item.expiryDate}`,
+      sortValue: daysUntilExpiry,
+      badgeClass: "bg-green-100 text-green-700",
+    };
+  };
+
+  const canUseIngredientInRecipe = (item: Ingredient) => {
+    const expiryInfo = getExpiryInfo(item);
+    return expiryInfo.status !== "missing" && expiryInfo.status !== "expired";
   };
 
   const validateIngredientForm = () => {
@@ -373,9 +460,9 @@ function InventoryPageContent() {
       servingsValue = parsedServings;
     }
 
-    const days = parseInt(remainingDays);
-    if (isNaN(days) || days < 0) {
-      setError("请输入有效的剩余天数");
+    const parsedExpiryDate = parseDateKey(expiryDate);
+    if (!parsedExpiryDate) {
+      setError("请选择有效的到期日期");
       return null;
     }
 
@@ -385,7 +472,7 @@ function InventoryPageContent() {
       quantity: qty,
       unit,
       servings: servingsValue,
-      remainingDays: days,
+      expiryDate,
     };
   };
 
@@ -423,7 +510,7 @@ function InventoryPageContent() {
     setQuantity(item.quantity.toString());
     setUnit(item.unit);
     setServings(item.servings?.toString() || "");
-    setRemainingDays(item.remainingDays.toString());
+    setExpiryDate(item.expiryDate || "");
     setIsEditDialogOpen(true);
   };
 
@@ -498,10 +585,14 @@ function InventoryPageContent() {
     return Array.from(methods);
   };
 
+  const getRecipeIngredients = () => {
+    return ingredients.filter(canUseIngredientInRecipe);
+  };
+
   const getCategoryIngredients = (ingredientCategory: string) => {
-    return ingredients
+    return getRecipeIngredients()
       .filter((item) => item.category === ingredientCategory)
-      .sort((a, b) => a.remainingDays - b.remainingDays);
+      .sort((a, b) => getExpiryInfo(a).sortValue - getExpiryInfo(b).sortValue);
   };
 
   const getServingCapacity = (items: Ingredient[]) => {
@@ -541,7 +632,9 @@ function InventoryPageContent() {
 
     if (candidates.length === 0) return null;
 
-    const selected = candidates.sort((a, b) => a.ingredient.remainingDays - b.ingredient.remainingDays)[0];
+    const selected = candidates.sort((a, b) => (
+      getExpiryInfo(a.ingredient).sortValue - getExpiryInfo(b.ingredient).sortValue
+    ))[0];
     if (selected.remainingServings !== null) {
       selected.remainingServings -= 1;
     }
@@ -549,18 +642,53 @@ function InventoryPageContent() {
   };
 
   const generateWeeklyPlan = () => {
+    const recipeIngredients = getRecipeIngredients();
+    const missingExpiryItems = ingredients.filter((item) => getExpiryInfo(item).status === "missing");
+    const expiredItems = ingredients.filter((item) => getExpiryInfo(item).status === "expired");
     const staples = getCategoryIngredients("主食");
     const vegetables = getCategoryIngredients("蔬菜");
     const fruits = getCategoryIngredients("水果");
-    const proteins = ingredients
+    const proteins = recipeIngredients
       .filter((item) => item.category === "肉类" || item.category === "蛋奶")
-      .sort((a, b) => a.remainingDays - b.remainingDays);
+      .sort((a, b) => getExpiryInfo(a).sortValue - getExpiryInfo(b).sortValue);
     const stapleCapacity = getServingCapacity(staples);
     const proteinCapacity = getServingCapacity(proteins);
     const vegetableCapacity = getServingCapacity(vegetables);
     const fruitCapacity = getServingCapacity(fruits);
     const requiredNeeds: ShoppingNeed[] = [];
     const optionalNeeds: ShoppingNeed[] = [];
+
+    if (ingredients.length > 0 && recipeIngredients.length === 0) {
+      requiredNeeds.push({
+        category: "没有可用食材",
+        reason: "所有食材都缺少到期日期或已经过期，补充真实到期日期后才能生成菜谱",
+        priority: "required",
+      });
+    }
+
+    if (missingExpiryItems.length > 0) {
+      optionalNeeds.push({
+        category: "需要补充到期日期",
+        reason: `${missingExpiryItems.length} 项食材缺少到期日期，暂不参与菜谱生成`,
+        priority: "optional",
+      });
+    }
+
+    if (expiredItems.length > 0) {
+      optionalNeeds.push({
+        category: "已过期食材未使用",
+        reason: `${expiredItems.length} 项食材已过期，未纳入菜谱生成`,
+        priority: "optional",
+      });
+    }
+
+    if (requiredNeeds.length > 0) {
+      setRecipeWarning("当前没有可用于生成菜谱的食材");
+      setShoppingNeeds([...requiredNeeds, ...optionalNeeds]);
+      setWeeklyPlan([]);
+      setHasGenerated(false);
+      return;
+    }
 
     if (staples.length === 0) {
       requiredNeeds.push({
@@ -717,11 +845,12 @@ function InventoryPageContent() {
   };
 
   const getUsagePlan = () => {
-    return ingredients
+    return getRecipeIngredients()
       .map((ingredient) => {
         const days: string[] = [];
-        const maxDays = ingredient.remainingDays <= 2 ? 3 : ingredient.remainingDays <= 5 ? 4 : 5;
-        const offset = ingredient.remainingDays > 5 ? 2 : 0;
+        const daysUntilExpiry = getDaysUntilExpiry(ingredient.expiryDate) || 0;
+        const maxDays = daysUntilExpiry <= 2 ? 3 : daysUntilExpiry <= 5 ? 4 : 5;
+        const offset = daysUntilExpiry > 5 ? 2 : 0;
 
         for (let i = 0; i < maxDays; i++) {
           const date = new Date();
@@ -732,7 +861,7 @@ function InventoryPageContent() {
         return {
           ingredient: ingredient.name,
           days,
-          priority: ingredient.remainingDays <= 2 ? 1 : ingredient.remainingDays <= 5 ? 2 : 3,
+          priority: daysUntilExpiry <= 2 ? 1 : daysUntilExpiry <= 5 ? 2 : 3,
         };
       })
       .sort((a, b) => a.priority - b.priority);
@@ -764,7 +893,12 @@ function InventoryPageContent() {
   const filteredIngredients = categoryFilter === "全部"
     ? ingredients
     : ingredients.filter((item) => item.category === categoryFilter);
-  const expiringItems = ingredients.filter((item) => item.remainingDays <= 2);
+  const expiringItems = ingredients.filter((item) => {
+    const expiryInfo = getExpiryInfo(item);
+    return expiryInfo.status === "expired" || expiryInfo.status === "today" || expiryInfo.status === "soon";
+  });
+  const missingExpiryItems = ingredients.filter((item) => getExpiryInfo(item).status === "missing");
+  const recipeIngredients = getRecipeIngredients();
   const usagePlan = getUsagePlan();
   const nutritionTargets = getNutritionTargets(profile, displayWeight);
 
@@ -1003,13 +1137,12 @@ function InventoryPageContent() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="remainingDays">剩余天数</Label>
+                    <Label htmlFor="expiryDate">到期日期</Label>
                     <Input
-                      id="remainingDays"
-                      type="number"
-                      placeholder="3"
-                      value={remainingDays}
-                      onChange={(e) => setRemainingDays(e.target.value)}
+                      id="expiryDate"
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
                     />
                   </div>
                 </div>
@@ -1025,22 +1158,27 @@ function InventoryPageContent() {
             </CardContent>
           </Card>
 
-          {expiringItems.length > 0 && (
+          {(expiringItems.length > 0 || missingExpiryItems.length > 0) && (
             <Card className="border-amber-300 bg-amber-50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-amber-700 flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5" />
-                  临近过期 ({expiringItems.length} 项)
+                  食材日期提醒 ({expiringItems.length + missingExpiryItems.length} 项)
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {expiringItems.map((item) => (
+                  {missingExpiryItems.map((item) => (
                     <span
                       key={item.id}
                       className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded text-sm"
                     >
-                      {item.name} · {item.remainingDays}天
+                      {item.name} · 需要补充到期日期
+                    </span>
+                  ))}
+                  {expiringItems.map((item) => (
+                    <span key={item.id} className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${getExpiryInfo(item).badgeClass}`}>
+                      {item.name} · {getExpiryInfo(item).label}
                     </span>
                   ))}
                 </div>
@@ -1075,47 +1213,54 @@ function InventoryPageContent() {
                 <div className="text-center py-8 text-zinc-500">暂无食材，请先添加</div>
               ) : (
                 <div className="space-y-2">
-                  {filteredIngredients.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg hover:bg-zinc-100 transition-colors"
-                    >
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Package className="h-5 w-5 text-zinc-400" />
-                        <span className="font-medium">{item.name}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded ${getCategoryColor(item.category)}`}>
-                          {item.category}
-                        </span>
-                        <span className="text-sm text-zinc-500">
-                          {item.quantity}{item.unit}
-                        </span>
-                        <span className="text-sm text-zinc-500">
-                          {formatServings(item)}
-                        </span>
-                        {item.remainingDays <= 2 && (
-                          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded flex items-center gap-1">
-                            <AlertTriangle className="h-3 w-3" />
-                            {item.remainingDays}天
+                  {filteredIngredients.map((item) => {
+                    const expiryInfo = getExpiryInfo(item);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between p-3 bg-zinc-50 rounded-lg hover:bg-zinc-100 transition-colors"
+                      >
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Package className="h-5 w-5 text-zinc-400" />
+                          <span className="font-medium">{item.name}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded ${getCategoryColor(item.category)}`}>
+                            {item.category}
                           </span>
-                        )}
+                          <span className="text-sm text-zinc-500">
+                            {item.quantity}{item.unit}
+                          </span>
+                          <span className="text-sm text-zinc-500">
+                            {formatServings(item)}
+                          </span>
+                          <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${expiryInfo.badgeClass}`}>
+                            <AlertTriangle className="h-3 w-3" />
+                            {expiryInfo.label}
+                          </span>
+                          {!canUseIngredientInRecipe(item) && (
+                            <span className="text-xs px-2 py-0.5 rounded bg-zinc-100 text-zinc-600">
+                              不参与菜谱
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setItemToDelete(item);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(item)}>
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setItemToDelete(item);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -1177,7 +1322,9 @@ function InventoryPageContent() {
                 <Leaf className="h-5 w-5 text-green-600" />
                 当前食材库存
               </CardTitle>
-              <CardDescription>共 {ingredients.length} 种食材可用</CardDescription>
+              <CardDescription>
+                共 {ingredients.length} 种食材，其中 {recipeIngredients.length} 种可用于菜谱
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -1186,21 +1333,34 @@ function InventoryPageContent() {
                 <div className="text-center py-8 text-zinc-500">暂无食材，请先添加食材</div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {ingredients.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`p-3 rounded-lg border ${
-                        item.remainingDays <= 2
-                          ? "border-red-200 bg-red-50"
-                          : "border-zinc-200 bg-zinc-50"
-                      }`}
-                    >
-                      <div className="font-medium text-zinc-900">{item.name}</div>
-                      <div className="text-sm text-zinc-500">
-                        {item.quantity}{item.unit} · {formatServings(item)} · 剩{item.remainingDays}天
+                  {ingredients.map((item) => {
+                    const expiryInfo = getExpiryInfo(item);
+                    const isUsable = canUseIngredientInRecipe(item);
+
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-3 rounded-lg border ${
+                          expiryInfo.status === "expired"
+                            ? "border-red-200 bg-red-50"
+                            : expiryInfo.status === "missing"
+                            ? "border-amber-200 bg-amber-50"
+                            : "border-zinc-200 bg-zinc-50"
+                        }`}
+                      >
+                        <div className="font-medium text-zinc-900">{item.name}</div>
+                        <div className="text-sm text-zinc-500">
+                          {item.quantity}{item.unit} · {formatServings(item)}
+                        </div>
+                        <div className={`mt-2 inline-flex rounded px-2 py-0.5 text-xs ${expiryInfo.badgeClass}`}>
+                          {expiryInfo.label}
+                        </div>
+                        {!isUsable && (
+                          <div className="mt-1 text-xs text-zinc-500">不参与菜谱生成</div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -1532,8 +1692,8 @@ function InventoryPageContent() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>剩余天数</Label>
-              <Input type="number" value={remainingDays} onChange={(e) => setRemainingDays(e.target.value)} />
+              <Label>到期日期</Label>
+              <Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>可用顿数</Label>

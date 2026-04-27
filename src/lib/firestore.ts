@@ -666,12 +666,13 @@ export interface Ingredient {
   quantity: number;
   unit: string;
   servings?: number;
-  remainingDays: number;
+  expiryDate?: string;
+  remainingDays?: number;
   userId: string;
   createdAt: Date;
 }
 
-export type IngredientInput = Omit<Ingredient, "id" | "userId" | "createdAt" | "servings"> & {
+export type IngredientInput = Omit<Ingredient, "id" | "userId" | "createdAt" | "servings" | "remainingDays"> & {
   servings?: number | null;
 };
 
@@ -703,7 +704,8 @@ export const getIngredients = async (
       quantity: data.quantity as number,
       unit: data.unit as string,
       servings: typeof data.servings === "number" ? data.servings : undefined,
-      remainingDays: data.remainingDays as number,
+      expiryDate: typeof data.expiryDate === "string" ? data.expiryDate : undefined,
+      remainingDays: typeof data.remainingDays === "number" ? data.remainingDays : undefined,
       userId: data.userId as string,
       createdAt: data.createdAt?.toDate() || new Date(),
     };

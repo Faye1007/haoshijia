@@ -147,7 +147,8 @@ ingredients/{userId}/items/{ingredientId}
   - quantity
   - unit
   - servings
-  - remainingDays
+  - expiryDate
+  - remainingDays（旧字段兼容）
   - userId
   - createdAt
 ```
@@ -157,6 +158,7 @@ ingredients/{userId}/items/{ingredientId}
 - 独立复盘页面尚未实现，当前复盘内容主要在饮食记录页内即时生成。
 - 后续如果需要持久化复盘结果，可再引入 `reviews/{userId}/weekly/{weekId}`。
 - `ingredients.servings` 为可选字段，旧食材没有该字段时继续兼容显示。
+- `ingredients.expiryDate` 为当前食材到期日期字段，格式为 `YYYY-MM-DD`；旧 `remainingDays` 不再作为菜谱生成依据，缺少 `expiryDate` 的旧食材需要用户补充到期日期后才参与菜谱生成。
 
 ---
 
