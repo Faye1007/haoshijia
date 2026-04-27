@@ -15,11 +15,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   addIngredient,
   deleteIngredient,
+  getLatestDisplayWeight,
   getIngredients,
   getUserProfile,
+  type DisplayWeight,
   Ingredient,
   updateIngredient,
   updateUserProfile,
+  type UserProfile,
 } from "@/lib/firestore";
 import {
   AlertCircle,
@@ -56,6 +59,7 @@ interface MealPlan {
     side: string;
     method: string;
     tip?: string;
+    nutrition?: MealNutritionReference;
   }[];
 }
 
@@ -70,6 +74,30 @@ interface ShoppingNeed {
 interface IngredientPoolItem {
   ingredient: Ingredient;
   remainingServings: number | null;
+}
+
+interface NutritionTargets {
+  bmr: number;
+  estimatedDailyBurn: number;
+  calorieRange: {
+    min: number;
+    max: number;
+  };
+  macros: {
+    carbs: number;
+    protein: number;
+    fat: number;
+  };
+  missingFields: string[];
+  weightSource: "latest" | "initial";
+}
+
+interface MealNutritionReference {
+  calories: number;
+  carbs: number;
+  protein: number;
+  fat: number;
+  portion: string;
 }
 
 const categories = [
@@ -131,6 +159,110 @@ const defaultSettings: UserSettings = {
   preferredMethods: ["炒制", "蒸煮"],
 };
 
+const activityFactors: Record<string, number> = {
+  low: 1.2,
+  light: 1.375,
+  moderate: 1.55,
+  active: 1.725,
+};
+
+const mealNutritionRatios: Record<string, number> = {
+  早餐: 0.3,
+  午餐: 0.4,
+  晚餐: 0.3,
+};
+
+const mealPortionHints: Record<string, string> = {
+  早餐: "主食 1 份 + 蛋白质 1 份，可搭配水果",
+  午餐: "主食 1 份 + 蛋白质 1 份 + 蔬菜 2 份",
+  晚餐: "蛋白质 1 份 + 蔬菜 1-2 份，主食按饥饿感选择",
+};
+
+const getAgeFromBirthYear = (birthYear?: number) => {
+  if (!birthYear) return null;
+  const age = new Date().getFullYear() - birthYear;
+  return age > 0 ? age : null;
+};
+
+const getNutritionTargets = (
+  profile: UserProfile | null,
+  displayWeight: DisplayWeight | null
+): NutritionTargets | null => {
+  const latestWeight = displayWeight?.weight ?? null;
+  const weight = latestWeight ?? profile?.currentWeight ?? null;
+  const age = getAgeFromBirthYear(profile?.birthYear);
+  const missingFields: string[] = [];
+
+  if (!profile?.heightCm) missingFields.push("身高");
+  if (!weight) missingFields.push("体重");
+  if (!age) missingFields.push("出生年份");
+  if (!profile?.gender) missingFields.push("性别");
+  if (!profile?.activityLevel) missingFields.push("活动水平");
+
+  if (
+    !profile?.heightCm ||
+    !weight ||
+    !age ||
+    !profile.gender ||
+    !profile.activityLevel
+  ) {
+    return {
+      bmr: 0,
+      estimatedDailyBurn: 0,
+      calorieRange: { min: 0, max: 0 },
+      macros: { carbs: 0, protein: 0, fat: 0 },
+      missingFields,
+      weightSource: latestWeight ? "latest" : "initial",
+    };
+  }
+
+  const genderConstant = profile.gender === "male"
+    ? 5
+    : profile.gender === "female"
+      ? -161
+      : -78;
+  const activityFactor = activityFactors[profile.activityLevel] || activityFactors.low;
+  const bmr = 10 * weight + 6.25 * profile.heightCm - 5 * age + genderConstant;
+  const estimatedDailyBurn = bmr * activityFactor;
+  const calorieMin = Math.round(Math.max(bmr, estimatedDailyBurn - 500));
+  const calorieMax = Math.round(Math.max(calorieMin, estimatedDailyBurn - 300));
+  const macroCalories = (calorieMin + calorieMax) / 2;
+
+  return {
+    bmr: Math.round(bmr),
+    estimatedDailyBurn: Math.round(estimatedDailyBurn),
+    calorieRange: {
+      min: calorieMin,
+      max: calorieMax,
+    },
+    macros: {
+      carbs: Math.round((macroCalories * 0.45) / 4),
+      protein: Math.round((macroCalories * 0.25) / 4),
+      fat: Math.round((macroCalories * 0.3) / 9),
+    },
+    missingFields: [],
+    weightSource: latestWeight ? "latest" : "initial",
+  };
+};
+
+const getMealNutritionReference = (
+  mealType: string,
+  targets: NutritionTargets | null
+): MealNutritionReference | undefined => {
+  if (!targets || targets.missingFields.length > 0) return undefined;
+
+  const ratio = mealNutritionRatios[mealType] || 0.33;
+  const targetCalories = (targets.calorieRange.min + targets.calorieRange.max) / 2;
+
+  return {
+    calories: Math.round(targetCalories * ratio),
+    carbs: Math.round(targets.macros.carbs * ratio),
+    protein: Math.round(targets.macros.protein * ratio),
+    fat: Math.round(targets.macros.fat * ratio),
+    portion: mealPortionHints[mealType] || "按当天饥饿感调整份量",
+  };
+};
+
 function InventoryPageContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -146,6 +278,8 @@ function InventoryPageContent() {
   const [recipeWarning, setRecipeWarning] = useState("");
   const [shoppingNeeds, setShoppingNeeds] = useState<ShoppingNeed[]>([]);
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<string>("肉类");
@@ -179,9 +313,17 @@ function InventoryPageContent() {
   }, [user]);
 
   const loadUserSettings = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setProfile(null);
+      setDisplayWeight(null);
+      return;
+    }
     try {
+      const today = new Date().toISOString().split("T")[0];
       const profile = await getUserProfile(user.uid);
+      const latestWeight = await getLatestDisplayWeight(user.uid, today);
+      setProfile(profile);
+      setDisplayWeight(latestWeight);
       if (profile?.recipeSettings) {
         setSettings(profile.recipeSettings as unknown as UserSettings);
       }
@@ -521,6 +663,7 @@ function InventoryPageContent() {
             side: [protein?.name, fruit?.name].filter(Boolean).join(" + ") || "-",
             method: staple ? getMethod(staple.category) : "简单烹饪",
             tip,
+            nutrition: getMealNutritionReference(mealType, nutritionTargets),
           };
         }
 
@@ -539,6 +682,7 @@ function InventoryPageContent() {
             side: [protein?.name, staple?.name].filter(Boolean).join(" + ") || "-",
             method: protein ? getMethod(protein.category) : "简单烹饪",
             tip,
+            nutrition: getMealNutritionReference(mealType, nutritionTargets),
           };
         }
 
@@ -555,6 +699,7 @@ function InventoryPageContent() {
           ].filter(Boolean).join(" + ") || "-",
           method: primaryVegetable ? getMethod(primaryVegetable.category) : "简单烹饪",
           tip,
+          nutrition: getMealNutritionReference(mealType, nutritionTargets),
         };
       });
 
@@ -621,6 +766,7 @@ function InventoryPageContent() {
     : ingredients.filter((item) => item.category === categoryFilter);
   const expiringItems = ingredients.filter((item) => item.remainingDays <= 2);
   const usagePlan = getUsagePlan();
+  const nutritionTargets = getNutritionTargets(profile, displayWeight);
 
   const getMeal = (dayPlan: MealPlan, mealType: string) => {
     return dayPlan.meals.find((meal) => meal.type === mealType);
@@ -649,6 +795,14 @@ function InventoryPageContent() {
     return (
       <div className={compact ? "space-y-1" : "space-y-1.5"}>
         <div className="font-medium leading-snug text-zinc-900">{getMealText(dayPlan, mealType)}</div>
+        {meal.nutrition && (
+          <div className="text-xs leading-snug text-sky-700">
+            参考 {meal.nutrition.calories} kcal · 碳水 {meal.nutrition.carbs}g / 蛋白 {meal.nutrition.protein}g / 脂肪 {meal.nutrition.fat}g
+          </div>
+        )}
+        {meal.nutrition && (
+          <div className="text-xs leading-snug text-zinc-500">{meal.nutrition.portion}</div>
+        )}
         <div className="flex items-center gap-1.5 text-xs text-zinc-500">
           <Clock className="h-3 w-3 shrink-0" />
           <span>{meal.method}</span>
@@ -969,6 +1123,54 @@ function InventoryPageContent() {
         </TabsContent>
 
         <TabsContent value="recipe" className="recipe-tab-content space-y-6">
+          <Card className="no-print">
+            <CardHeader>
+              <CardTitle>营养参考目标</CardTitle>
+              <CardDescription>根据个人资料和最近体重估算，仅供记录和安排份量参考</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {nutritionTargets && nutritionTargets.missingFields.length === 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-4">
+                      <div className="text-sm text-sky-700">每日热量参考</div>
+                      <div className="mt-2 text-2xl font-bold text-zinc-900">
+                        {nutritionTargets.calorieRange.min}-{nutritionTargets.calorieRange.max} kcal
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        使用{nutritionTargets.weightSource === "latest" ? "最近体重" : "初始体重"}估算
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-zinc-200 bg-white/60 p-4">
+                      <div className="text-sm text-zinc-500">基础代谢 / 日消耗</div>
+                      <div className="mt-2 text-lg font-bold text-zinc-900">
+                        {nutritionTargets.bmr} / {nutritionTargets.estimatedDailyBurn} kcal
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">按活动水平粗略估算</div>
+                    </div>
+                    <div className="rounded-lg border border-zinc-200 bg-white/60 p-4">
+                      <div className="text-sm text-zinc-500">三大营养素</div>
+                      <div className="mt-2 text-sm font-medium leading-6 text-zinc-900">
+                        碳水 {nutritionTargets.macros.carbs}g · 蛋白 {nutritionTargets.macros.protein}g · 脂肪 {nutritionTargets.macros.fat}g
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">按 45% / 25% / 30% 分配</div>
+                    </div>
+                  </div>
+                  <p className="text-xs leading-relaxed text-zinc-500">
+                    以上是减脂记录场景下的轻量参考，不是医疗建议；如有疾病、孕期、哺乳期或特殊饮食需求，应咨询专业人士。
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-zinc-200 bg-white/50 p-4 text-sm text-zinc-500">
+                  补充{nutritionTargets?.missingFields.join("、") || "个人资料"}后，可显示每日热量和碳水、蛋白质、脂肪参考目标。
+                  <a href="/dashboard/profile" className="ml-2 font-medium text-sky-700 hover:text-sky-800">
+                    去完善资料
+                  </a>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
