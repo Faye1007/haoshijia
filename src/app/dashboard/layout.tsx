@@ -25,12 +25,12 @@ import { Button } from "@/components/ui/button";
 
 const navItems: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/dashboard", label: "首页", icon: Home },
-  { href: "/dashboard/weight", label: "体重记录", icon: Scale },
-  { href: "/dashboard/measurements", label: "围度记录", icon: Ruler },
+  { href: "/dashboard/inventory", label: "食材与菜谱", icon: Package },
   { href: "/dashboard/food", label: "饮食记录", icon: UtensilsCrossed },
   { href: "/dashboard/exercise", label: "运动记录", icon: Activity },
+  { href: "/dashboard/weight", label: "体重记录", icon: Scale },
+  { href: "/dashboard/measurements", label: "围度记录", icon: Ruler },
   { href: "/dashboard/review", label: "复盘", icon: BarChart3 },
-  { href: "/dashboard/inventory", label: "食材与菜谱", icon: Package },
   { href: "/dashboard/profile", label: "个人资料", icon: UserRound },
 ];
 
