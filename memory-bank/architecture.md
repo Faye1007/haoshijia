@@ -86,10 +86,10 @@ haoshijia/
 - 顶部栏和仪表盘欢迎语优先使用用户昵称，未设置时回退邮箱；右上角昵称和头像区域可点击跳转到 `/dashboard/profile`。
 - 首页、仪表盘和体重、围度、饮食、运动记录页共用 `RecordPrincipleNotice`，提示记录用于复盘、请尽量真实填写、历史记录暂不支持修改；今日误录仍按各页面已有能力删除或重新记录，不扩展任意历史编辑能力。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
-- 全局视觉风格已升级为冰蓝玻璃感：
-  - `src/app/globals.css` 定义冷白、浅蓝灰、蓝青色主基调，以及 `app-aurora-bg` 背景。
-  - dashboard shell、侧边栏、顶部栏和移动端菜单按钮使用半透明背景、细边框、柔和阴影和 `backdrop-blur`。
-  - Card、Button、Input、Select、Tabs、Dialog、Sheet、Dropdown、Toast、Checkbox 等基础 UI 组件统一采用冰蓝玻璃质感。
+- 全局视觉风格已调整为数据游戏化记录工具：
+  - `src/app/globals.css` 定义纸白网格底、炭黑主色、lime 状态色和少量红黄蓝任务点缀。
+  - dashboard shell 使用纸白网格背景；侧边栏使用深色导航，当前页面以 lime 高亮；顶部栏使用白底高对比样式。
+  - Card、Button、Input、Select、Dialog 等基础 UI 组件统一采用黑白底、清晰边框、轻阴影和 lime focus 状态。
   - 打印样式仍集中在 `globals.css` 的 `@media print` 中，保持白底、隐藏后台导航，并只放行菜谱打印区域。
 - 图表使用 Recharts。
 - 图标使用 lucide-react，部分导航图标当前仍为内联 SVG path。

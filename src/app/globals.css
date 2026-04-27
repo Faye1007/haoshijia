@@ -2,98 +2,99 @@
 
 @layer base {
   :root {
-    --background: #eef8ff;
-    --foreground: #0f172a;
-    --card: rgb(255 255 255 / 0.74);
-    --card-foreground: #0f172a;
-    --popover: rgb(255 255 255 / 0.88);
-    --popover-foreground: #0f172a;
-    --primary: #0284c7;
-    --primary-foreground: #f8fbff;
-    --secondary: #e0f2fe;
-    --secondary-foreground: #075985;
-    --muted: #eaf6ff;
-    --muted-foreground: #64748b;
-    --accent: #ccfbf1;
-    --accent-foreground: #0f766e;
+    --background: #f7f4ee;
+    --foreground: #171717;
+    --card: rgb(255 255 255 / 0.92);
+    --card-foreground: #171717;
+    --popover: rgb(255 255 255 / 0.96);
+    --popover-foreground: #171717;
+    --primary: #18181b;
+    --primary-foreground: #fffdf7;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #27272a;
+    --muted: #f1ede5;
+    --muted-foreground: #71717a;
+    --accent: #d9f99d;
+    --accent-foreground: #3f6212;
     --destructive: #ef4444;
     --destructive-foreground: #fff7ed;
-    --border: rgb(186 230 253 / 0.72);
-    --input: rgb(186 230 253 / 0.72);
-    --ring: #0891b2;
+    --border: rgb(39 39 42 / 0.14);
+    --input: rgb(39 39 42 / 0.18);
+    --ring: #a3e635;
     --radius: 0.5rem;
   }
 }
 
 html {
   min-height: 100%;
-  background: #eef8ff;
+  background: #f7f4ee;
 }
 
 body {
   min-height: 100%;
   background:
-    radial-gradient(circle at 12% 8%, rgb(125 211 252 / 0.34), transparent 28rem),
-    radial-gradient(circle at 86% 12%, rgb(45 212 191 / 0.22), transparent 24rem),
-    linear-gradient(135deg, #f8fbff 0%, #eef8ff 45%, #e8f3ff 100%);
+    linear-gradient(90deg, rgb(23 23 23 / 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgb(23 23 23 / 0.035) 1px, transparent 1px),
+    linear-gradient(135deg, #fffdf7 0%, #f7f4ee 54%, #f1ede5 100%);
+  background-size: 28px 28px, 28px 28px, auto;
   color: var(--foreground);
 }
 
 ::selection {
-  background: rgb(125 211 252 / 0.45);
-  color: #0f172a;
+  background: rgb(217 249 157 / 0.82);
+  color: #18181b;
 }
 
 .app-aurora-bg {
   background:
-    radial-gradient(circle at 12% 10%, rgb(125 211 252 / 0.42), transparent 28rem),
-    radial-gradient(circle at 86% 16%, rgb(45 212 191 / 0.26), transparent 25rem),
-    radial-gradient(circle at 70% 86%, rgb(191 219 254 / 0.38), transparent 30rem),
-    linear-gradient(135deg, #f8fbff 0%, #eef8ff 46%, #e5f3ff 100%);
+    linear-gradient(90deg, rgb(23 23 23 / 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgb(23 23 23 / 0.04) 1px, transparent 1px),
+    linear-gradient(135deg, #fffdf7 0%, #f7f4ee 56%, #f1ede5 100%);
+  background-size: 30px 30px, 30px 30px, auto;
 }
 
 .dashboard-main .bg-zinc-50 {
-  background-color: rgb(240 249 255 / 0.72);
+  background-color: rgb(250 250 250 / 0.86);
 }
 
 .dashboard-main .bg-zinc-100 {
-  background-color: rgb(224 242 254 / 0.74);
+  background-color: rgb(244 244 245 / 0.9);
 }
 
 .dashboard-main .bg-zinc-200 {
-  background-color: rgb(186 230 253 / 0.72);
+  background-color: rgb(228 228 231 / 0.9);
 }
 
 .dashboard-main .bg-zinc-900 {
-  background-color: #0369a1;
+  background-color: #18181b;
 }
 
 .dashboard-main .border-zinc-200 {
-  border-color: rgb(186 230 253 / 0.82);
+  border-color: rgb(39 39 42 / 0.14);
 }
 
 .dashboard-main .text-zinc-900 {
-  color: #0f172a;
+  color: #18181b;
 }
 
 .dashboard-main .text-zinc-800 {
-  color: #1e3a5f;
+  color: #27272a;
 }
 
 .dashboard-main .text-zinc-700 {
-  color: #28506f;
+  color: #3f3f46;
 }
 
 .dashboard-main .text-zinc-600 {
-  color: #3f6f8f;
+  color: #52525b;
 }
 
 .dashboard-main .text-zinc-500 {
-  color: #64748b;
+  color: #71717a;
 }
 
 .dashboard-main .text-zinc-400 {
-  color: #38bdf8;
+  color: #a1a1aa;
 }
 
 .print-only {

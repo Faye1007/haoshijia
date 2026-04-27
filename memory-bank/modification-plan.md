@@ -578,7 +578,7 @@
 
 当前状态：
 - 仪表盘“今日进度”和“今日任务”已在 Step 45 落地，详见 `memory-bank/progress.md`。
-- 全局游戏化视觉基调仍待 Step 44 单独执行。
+- 全局游戏化视觉基调已在 Step 44 落地，详见 `memory-bank/progress.md`。
 
 ---
 

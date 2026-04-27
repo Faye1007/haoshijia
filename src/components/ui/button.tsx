@@ -5,16 +5,16 @@ import { type VariantProps, cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/40 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/70 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-sky-600 to-cyan-500 text-white shadow-[0_10px_28px_rgba(14,165,233,0.24)] hover:from-sky-700 hover:to-cyan-600",
-        destructive: "bg-red-500 text-white shadow-[0_10px_24px_rgba(239,68,68,0.18)] hover:bg-red-600",
-        outline: "border border-sky-200/80 bg-white/70 text-sky-900 shadow-sm backdrop-blur hover:bg-sky-50 hover:text-sky-950",
-        secondary: "bg-cyan-50/90 text-cyan-900 hover:bg-cyan-100",
-        ghost: "text-slate-700 hover:bg-sky-100/70 hover:text-sky-900",
-        link: "text-sky-700 underline-offset-4 hover:text-sky-900 hover:underline",
+        default: "bg-zinc-950 text-white shadow-[0_10px_26px_rgba(24,24,27,0.22)] hover:-translate-y-0.5 hover:bg-zinc-800",
+        destructive: "bg-red-500 text-white shadow-[0_10px_24px_rgba(239,68,68,0.2)] hover:-translate-y-0.5 hover:bg-red-600",
+        outline: "border border-zinc-300 bg-white text-zinc-950 shadow-sm hover:-translate-y-0.5 hover:border-zinc-950 hover:bg-lime-50",
+        secondary: "bg-lime-100 text-lime-950 hover:bg-lime-200",
+        ghost: "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950",
+        link: "text-zinc-950 underline-offset-4 hover:text-red-600 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",
