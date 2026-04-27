@@ -1,10 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { UserRound } from "lucide-react";
+import { ShieldAlert, Trash2, UserRound, UserX } from "lucide-react";
 import { AuthRequiredDialog } from "@/components/AuthRequiredDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,7 +23,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserProfile, updateUserProfile, type UserProfile } from "@/lib/firestore";
+import {
+  clearUserHistoryData,
+  deleteUserData,
+  getUserProfile,
+  updateUserProfile,
+  type UserProfile,
+} from "@/lib/firestore";
+import { firebaseDeleteCurrentUser, firebaseReauthenticateWithPassword } from "@/lib/auth";
 
 interface ProfileFormData {
   nickname: string;
@@ -54,6 +69,9 @@ const emptyForm: ProfileFormData = {
   activityLevel: "not_set",
 };
 
+const clearHistoryConfirmText = "清除历史数据";
+const deleteAccountConfirmText = "注销账号";
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -64,6 +82,15 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clearConfirm, setClearConfirm] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [dangerError, setDangerError] = useState("");
+  const [dangerSuccess, setDangerSuccess] = useState("");
+  const [isClearing, setIsClearing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadProfile = useCallback(async () => {
     if (!user) {
@@ -156,6 +183,114 @@ export default function ProfilePage() {
       setSaveError("保存失败，请重试");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const resetDangerState = () => {
+    setDangerError("");
+    setDangerSuccess("");
+  };
+
+  const openClearDialog = () => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    resetDangerState();
+    setClearConfirm("");
+    setClearDialogOpen(true);
+  };
+
+  const openDeleteDialog = () => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+    resetDangerState();
+    setDeleteConfirm("");
+    setDeletePassword("");
+    setDeleteDialogOpen(true);
+  };
+
+  const handleClearHistory = async () => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    if (clearConfirm.trim() !== clearHistoryConfirmText) {
+      setDangerError(`请输入“${clearHistoryConfirmText}”后再继续`);
+      return;
+    }
+
+    setIsClearing(true);
+    setDangerError("");
+    setDangerSuccess("");
+
+    try {
+      await clearUserHistoryData(user.uid, profile?.createdAt);
+      setClearDialogOpen(false);
+      setClearConfirm("");
+      setDangerSuccess("历史数据已清除，账号和基础资料仍然保留。");
+      await loadProfile();
+      window.dispatchEvent(new Event("haoshijia-profile-updated"));
+    } catch (error) {
+      console.error("清除历史数据失败:", error);
+      setDangerError("清除失败，请稍后重试。");
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const getDeleteAccountErrorMessage = (error: unknown) => {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      typeof (error as { code?: unknown }).code === "string"
+    ) {
+      const code = (error as { code: string }).code;
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+        return "密码不正确，账号未注销。";
+      }
+      if (code === "auth/too-many-requests") {
+        return "尝试次数过多，请稍后再试。";
+      }
+    }
+
+    return "注销失败，请稍后重试。";
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) {
+      setAuthDialogOpen(true);
+      return;
+    }
+
+    if (!deletePassword) {
+      setDangerError("请输入当前账号密码。");
+      return;
+    }
+
+    if (deleteConfirm.trim() !== deleteAccountConfirmText) {
+      setDangerError(`请输入“${deleteAccountConfirmText}”后再继续`);
+      return;
+    }
+
+    setIsDeleting(true);
+    setDangerError("");
+    setDangerSuccess("");
+
+    try {
+      await firebaseReauthenticateWithPassword(user, deletePassword);
+      await deleteUserData(user.uid, profile?.createdAt);
+      await firebaseDeleteCurrentUser(user);
+      window.location.href = "/";
+    } catch (error) {
+      console.error("注销账号失败:", error);
+      setDangerError(getDeleteAccountErrorMessage(error));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -314,12 +449,155 @@ export default function ProfilePage() {
         </Card>
       </form>
 
+      {user && (
+        <Card className="border-red-200 bg-red-50/80">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <ShieldAlert className="h-5 w-5" />
+              危险区
+            </CardTitle>
+            <CardDescription className="text-red-600">
+              这里的操作不可恢复。清除历史数据会保留账号，注销账号会删除账号和全部数据。
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {dangerSuccess && (
+              <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                {dangerSuccess}
+              </div>
+            )}
+            {dangerError && (
+              <div className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600">
+                {dangerError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="rounded-md border border-red-200 bg-white/80 p-4">
+                <div className="flex items-center gap-2 font-medium text-zinc-900">
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                  清除历史数据
+                </div>
+                <p className="mt-2 text-sm text-zinc-600">
+                  删除记录、复盘计划、食材库存、体重目标和菜谱偏好，保留账号与基础资料。
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-4 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                  onClick={openClearDialog}
+                  disabled={isClearing || isDeleting}
+                >
+                  清除历史数据
+                </Button>
+              </div>
+
+              <div className="rounded-md border border-red-200 bg-white/80 p-4">
+                <div className="flex items-center gap-2 font-medium text-zinc-900">
+                  <UserX className="h-4 w-4 text-red-500" />
+                  注销账号
+                </div>
+                <p className="mt-2 text-sm text-zinc-600">
+                  删除全部用户数据和 Firebase 登录账号。注销后无法使用当前邮箱继续登录。
+                </p>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="mt-4"
+                  onClick={openDeleteDialog}
+                  disabled={isClearing || isDeleting}
+                >
+                  注销账号
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <AuthRequiredDialog
         open={authDialogOpen}
         onOpenChange={setAuthDialogOpen}
         title="登录后编辑资料"
         description="你可以先浏览个人资料页面。需要保存昵称和身体基础资料时，请先登录或注册账号。"
       />
+
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认清除历史数据</DialogTitle>
+            <DialogDescription>
+              此操作会删除所有记录、复盘计划、食材库存、体重目标和菜谱偏好，但保留账号和基础资料。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="clear-confirm">输入“{clearHistoryConfirmText}”确认</Label>
+            <Input
+              id="clear-confirm"
+              value={clearConfirm}
+              onChange={(event) => {
+                setClearConfirm(event.target.value);
+                setDangerError("");
+              }}
+              disabled={isClearing}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)} disabled={isClearing}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleClearHistory} disabled={isClearing}>
+              {isClearing ? "清除中..." : "确认清除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认注销账号</DialogTitle>
+            <DialogDescription>
+              注销会删除账号和全部用户数据。需要输入当前密码重新验证身份。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">当前账号密码</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                value={deletePassword}
+                onChange={(event) => {
+                  setDeletePassword(event.target.value);
+                  setDangerError("");
+                }}
+                disabled={isDeleting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirm">输入“{deleteAccountConfirmText}”确认</Label>
+              <Input
+                id="delete-confirm"
+                value={deleteConfirm}
+                onChange={(event) => {
+                  setDeleteConfirm(event.target.value);
+                  setDangerError("");
+                }}
+                disabled={isDeleting}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={isDeleting}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteAccount} disabled={isDeleting}>
+              {isDeleting ? "注销中..." : "确认注销"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

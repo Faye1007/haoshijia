@@ -7,51 +7,44 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   getLatestDisplayWeight,
   getLatestMeasurementSummary,
+  getRecordPresenceHistory,
   getUserProfile,
   type DisplayWeight,
   type LatestMeasurementSummary,
+  type RecordPresence,
   type UserProfile,
 } from "@/lib/firestore";
 import { getProfileDisplayName } from "@/lib/profile";
 import { useEffect, useState } from "react";
-import { HelpCircle, ArrowRight, Scale, UtensilsCrossed, TrendingUp, Ruler, UserRound } from "lucide-react";
-
-const quickActions = [
-  {
-    title: "记录体重",
-    description: "记录今日体重和体型变化",
-    href: "/dashboard/weight",
-    icon: "M12 3v18M3 9h18M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
-    color: "bg-blue-50 text-blue-600 hover:bg-blue-100",
-  },
-  {
-    title: "记录饮食",
-    description: "记录每日饮食摄入情况",
-    href: "/dashboard/food",
-    icon: "M12 3v18M3 15c1.5-1.5 3-3 6-3s4.5 1.5 6 3M3 9c1.5-1.5 3-3 6-3s4.5 1.5 6 3",
-    color: "bg-green-50 text-green-600 hover:bg-green-100",
-  },
-  {
-    title: "记录运动",
-    description: "记录每日运动消耗",
-    href: "/dashboard/exercise",
-    icon: "M22 12h-4l-3 9L9 3l-3 9H2",
-    color: "bg-orange-50 text-orange-600 hover:bg-orange-100",
-  },
-  {
-    title: "今日复盘",
-    description: "回顾今日饮食和体重",
-    href: "/dashboard/review",
-    icon: "M18 20V10M12 20V4M6 20v-6",
-    color: "bg-purple-50 text-purple-600 hover:bg-purple-100",
-  },
-];
+import {
+  ArrowRight,
+  CheckCircle2,
+  Circle,
+  Flame,
+  HelpCircle,
+  Ruler,
+  Scale,
+  Trophy,
+  UserRound,
+  UtensilsCrossed,
+  Activity,
+  ClipboardCheck,
+  TrendingUp,
+} from "lucide-react";
 
 const emptyMeasurementSummary: LatestMeasurementSummary = {
   waist: null,
   hip: null,
   thigh: null,
   upperArm: null,
+};
+
+const emptyPresence: RecordPresence = {
+  date: "",
+  weight: false,
+  measurement: false,
+  food: false,
+  exercise: false,
 };
 
 const measurementLabels: Record<keyof LatestMeasurementSummary, string> = {
@@ -87,40 +80,12 @@ const getBmiStatus = (bmi: number) => {
   return "较高";
 };
 
-function ActionCard({ action }: { action: typeof quickActions[0] }) {
-  return (
-    <a
-      href={action.href}
-      className={`block p-4 rounded-lg transition-colors ${action.color}`}
-    >
-      <div className="flex items-center gap-3">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d={action.icon} />
-        </svg>
-        <div>
-          <div className="font-medium text-sm">{action.title}</div>
-          <div className="text-xs opacity-80">{action.description}</div>
-        </div>
-      </div>
-    </a>
-  );
-}
-
 export default function DashboardPage() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [displayWeight, setDisplayWeight] = useState<DisplayWeight | null>(null);
   const [measurementSummary, setMeasurementSummary] = useState<LatestMeasurementSummary>(emptyMeasurementSummary);
+  const [recordPresence, setRecordPresence] = useState<RecordPresence[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -131,10 +96,11 @@ export default function DashboardPage() {
       const today = new Date().toISOString().split("T")[0];
 
       try {
-        const [profileData, weight, measurements] = await Promise.all([
+        const [profileData, weight, measurements, presence] = await Promise.all([
           getUserProfile(user.uid),
           getLatestDisplayWeight(user.uid, today),
           getLatestMeasurementSummary(user.uid),
+          getRecordPresenceHistory(user.uid, 14),
         ]);
 
         if (profileData) {
@@ -148,6 +114,7 @@ export default function DashboardPage() {
 
         setDisplayWeight(weight);
         setMeasurementSummary(measurements);
+        setRecordPresence(presence);
       } finally {
         setIsLoading(false);
       }
@@ -156,6 +123,7 @@ export default function DashboardPage() {
       setProfile(null);
       setDisplayWeight(null);
       setMeasurementSummary(emptyMeasurementSummary);
+      setRecordPresence([]);
       return;
     }
     fetchData();
@@ -164,6 +132,48 @@ export default function DashboardPage() {
   const visibleProfile = user ? profile : null;
   const visibleDisplayWeight = user ? displayWeight : null;
   const visibleMeasurementSummary = user ? measurementSummary : emptyMeasurementSummary;
+  const visibleRecordPresence = user ? recordPresence : [];
+  const todayPresence = visibleRecordPresence[0] ?? emptyPresence;
+  const taskItems = [
+    {
+      title: "称重",
+      description: "记录今日体重",
+      href: "/dashboard/weight",
+      done: todayPresence.weight,
+      icon: Scale,
+      accent: "bg-lime-100 text-lime-800 border-lime-200",
+    },
+    {
+      title: "饮食",
+      description: "写下至少一餐",
+      href: "/dashboard/food",
+      done: todayPresence.food,
+      icon: UtensilsCrossed,
+      accent: "bg-red-100 text-red-800 border-red-200",
+    },
+    {
+      title: "运动",
+      description: "记录一次活动",
+      href: "/dashboard/exercise",
+      done: todayPresence.exercise,
+      icon: Activity,
+      accent: "bg-sky-100 text-sky-800 border-sky-200",
+    },
+    {
+      title: "复盘",
+      description: "看今日模式",
+      href: "/dashboard/review",
+      done: todayPresence.weight || todayPresence.food || todayPresence.exercise,
+      icon: ClipboardCheck,
+      accent: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    },
+  ];
+  const completedTaskCount = taskItems.filter((item) => item.done).length;
+  const completionPercent = Math.round((completedTaskCount / taskItems.length) * 100);
+  const streakDays = visibleRecordPresence.reduce((streak, day) => {
+    if (streak !== visibleRecordPresence.indexOf(day)) return streak;
+    return day.weight || day.measurement || day.food || day.exercise ? streak + 1 : streak;
+  }, 0);
   const displayName = getProfileDisplayName(visibleProfile, user?.email);
   const remainingWeight = visibleProfile?.targetWeight && visibleDisplayWeight
     ? visibleDisplayWeight.weight - visibleProfile.targetWeight
@@ -265,59 +275,135 @@ export default function DashboardPage() {
 
       <RecordPrincipleNotice />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">
-              今日体重
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {visibleDisplayWeight ? (
-              <div className="space-y-1">
-                <div className="text-2xl font-bold">{visibleDisplayWeight.weight} kg</div>
-                <div className="text-xs text-zinc-500">
-                  {visibleDisplayWeight.source === "today"
+      <Card className="border-zinc-200 bg-white/85">
+        <CardHeader>
+          <CardTitle>今日进度</CardTitle>
+          <CardDescription>先看当前体重和目标差距，再决定今天要补哪些记录</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_2fr]">
+            <div className="rounded-lg border border-lime-200 bg-lime-50/80 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-lime-800">
+                <Scale className="h-4 w-4" />
+                {visibleDisplayWeight?.source === "today" ? "今日体重" : "最近体重"}
+              </div>
+              <div className="mt-3 text-3xl font-bold text-zinc-900">
+                {visibleDisplayWeight ? `${visibleDisplayWeight.weight} kg` : "未记录"}
+              </div>
+              <div className="mt-1 text-xs text-zinc-500">
+                {visibleDisplayWeight
+                  ? visibleDisplayWeight.source === "today"
                     ? visibleDisplayWeight.isMorning ? "今日晨起体重" : "今日最新记录"
-                    : `最近记录：${visibleDisplayWeight.date}`}
+                    : `最近记录：${visibleDisplayWeight.date}`
+                  : "今天可以先完成称重任务"}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-lg border border-zinc-200 bg-white/70 p-4">
+                <div className="text-sm text-zinc-500">初始体重</div>
+                <div className="mt-2 text-2xl font-bold text-zinc-900">
+                  {visibleProfile?.currentWeight ? `${visibleProfile.currentWeight} kg` : "未设置"}
                 </div>
               </div>
-            ) : (
-              <div className="text-lg text-zinc-400">未记录</div>
-            )}
-          </CardContent>
-        </Card>
+              <div className="rounded-lg border border-zinc-200 bg-white/70 p-4">
+                <div className="text-sm text-zinc-500">目标体重</div>
+                <div className="mt-2 text-2xl font-bold text-zinc-900">
+                  {visibleProfile?.targetWeight ? `${visibleProfile.targetWeight} kg` : "未设置"}
+                </div>
+              </div>
+              <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-4 text-white">
+                <div className="text-sm text-zinc-300">还需变化</div>
+                <div className="mt-2 text-2xl font-bold">
+                  {remainingWeight !== null ? `${remainingWeight.toFixed(1)} kg` : "--"}
+                </div>
+                <div className="mt-1 text-xs text-zinc-400">
+                  {remainingWeight !== null ? "按最近体重计算" : "设置目标后显示"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">
-              初始体重
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {visibleProfile?.currentWeight ? (
-              <div className="text-2xl font-bold">{visibleProfile.currentWeight} kg</div>
-            ) : (
-              <div className="text-lg text-zinc-400">未设置</div>
-            )}
-          </CardContent>
-        </Card>
+      <Card className="overflow-hidden border-zinc-900 bg-zinc-950 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
+        <CardContent className="p-5 md:p-6">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.6fr]">
+            <div className="space-y-4">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-lime-200">
+                  <Trophy className="h-3.5 w-3.5" />
+                  今日任务
+                </div>
+                <h3 className="mt-3 text-2xl font-bold">完成度 {completionPercent}%</h3>
+                <p className="mt-1 text-sm text-zinc-300">
+                  {user ? "把记录当成每日闯关，完成后再看复盘。" : "登录后会显示你的今日任务进度。"}
+                </p>
+              </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">
-              目标体重
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {visibleProfile?.targetWeight ? (
-              <div className="text-2xl font-bold">{visibleProfile.targetWeight} kg</div>
-            ) : (
-              <div className="text-lg text-zinc-400">未设置</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-md border border-white/10 bg-white/10 p-3">
+                  <div className="flex items-center gap-2 text-sm text-zinc-300">
+                    <CheckCircle2 className="h-4 w-4 text-lime-300" />
+                    已完成
+                  </div>
+                  <div className="mt-2 text-2xl font-bold">
+                    {completedTaskCount}/{taskItems.length}
+                  </div>
+                </div>
+                <div className="rounded-md border border-white/10 bg-white/10 p-3">
+                  <div className="flex items-center gap-2 text-sm text-zinc-300">
+                    <Flame className="h-4 w-4 text-yellow-300" />
+                    连续记录
+                  </div>
+                  <div className="mt-2 text-2xl font-bold">{streakDays} 天</div>
+                </div>
+              </div>
+
+              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-lime-300 via-yellow-300 to-red-400 transition-all"
+                  style={{ width: `${completionPercent}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {taskItems.map((task) => {
+                const TaskIcon = task.icon;
+                return (
+                  <a
+                    key={task.href}
+                    href={task.href}
+                    className="group rounded-md border border-white/10 bg-white p-4 text-zinc-950 transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(0,0,0,0.18)]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={`rounded-md border p-2 ${task.accent}`}>
+                        <TaskIcon className="h-5 w-5" />
+                      </div>
+                      {task.done ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2 py-1 text-xs font-medium text-lime-800">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          已完成
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600">
+                          <Circle className="h-3.5 w-3.5" />
+                          待完成
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-4">
+                      <div className="font-semibold">{task.title}</div>
+                      <div className="mt-1 text-sm text-zinc-500">{task.description}</div>
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -410,51 +496,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>快速打卡</CardTitle>
-          <CardDescription>快速记录今日数据</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {quickActions.map((action) => (
-              <ActionCard key={action.href} action={action} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>进展概览</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {visibleProfile?.targetWeight && visibleDisplayWeight && remainingWeight !== null ? (
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">
-                  {visibleDisplayWeight.source === "today" ? "今日" : "最近记录"}
-                </span>
-                <span className="font-medium">{visibleDisplayWeight.weight} kg</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">目标</span>
-                <span className="font-medium">{visibleProfile.targetWeight} kg</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-zinc-500">还需</span>
-                <span className="font-medium">
-                  {remainingWeight.toFixed(1)} kg
-                </span>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-zinc-400">
-              请先在体重记录中设置体重目标
-            </p>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

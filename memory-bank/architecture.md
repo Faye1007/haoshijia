@@ -59,7 +59,7 @@ haoshijia/
 | 首页 | `/` | 已实现公开入口，未登录可进入仪表盘浏览 |
 | 登录 | `/login` | 已实现 Firebase 邮箱密码登录 |
 | 注册 | `/register` | 已实现 Firebase 邮箱密码注册 |
-| 仪表盘 | `/dashboard` | 已实现，支持未登录只读浏览，今日体重已从体重记录子集合同步，并展示最近围度概览和身体概览 |
+| 仪表盘 | `/dashboard` | 已实现，支持未登录只读浏览，展示今日进度、今日任务、最近围度概览和身体概览 |
 | 体重记录与目标 | `/dashboard/weight` | 已实现体重记录、今日记录、趋势图、顶部目标摘要和折叠目标设置 |
 | 目标设定兼容跳转 | `/dashboard/goal` | 兼容旧入口，自动跳转到 `/dashboard/weight#goal-settings` |
 | 围度记录 | `/dashboard/measurements` | 已实现记录、趋势图、最近有效摘要、移动端紧凑摘要和今日记录删除 |
@@ -68,7 +68,7 @@ haoshijia/
 | 食材与菜谱 | `/dashboard/inventory` | 已实现食材 CRUD、一周菜谱生成和条件设置 |
 | 菜谱生成兼容跳转 | `/dashboard/recipe` | 兼容旧入口，自动跳转到 `/dashboard/inventory?tab=recipe` |
 | 复盘页 | `/dashboard/review` | 已实现独立日复盘和周复盘 |
-| 个人资料 | `/dashboard/profile` | 已实现昵称、身高、性别、出生年份和活动水平保存 |
+| 个人资料 | `/dashboard/profile` | 已实现昵称、身高、性别、出生年份、活动水平保存和账号数据管理危险区 |
 
 ## 前端架构
 
@@ -79,7 +79,10 @@ haoshijia/
 - 侧边栏导航已将目标设定合并到体重记录入口，体重记录页同时承担体重记录、趋势查看和目标设置；目标摘要位于页面顶部，目标设置表单默认折叠，通过“设置目标”按钮展开。
 - 侧边栏导航已将食材库存和菜谱生成合并为“食材与菜谱”入口，页面内使用 Tab 组织食材库存、一周菜谱和条件设置。
 - 侧边栏已新增“个人资料”入口，个人资料页用于保存昵称和基础身体资料；未登录用户可只读浏览，写入时仍使用 `AuthRequiredDialog` 拦截。
+- 个人资料页新增“危险区”，集中提供清除历史数据和注销账号能力；清除历史数据保留账号和基础资料，注销账号需要重新验证密码并删除用户数据与 Firebase Auth 账号。
 - 仪表盘身体概览复用个人资料中的身高、性别、出生年份、活动水平，并结合最近体重计算 BMI；该结果仅作为记录参考，不作为医疗建议。
+- 仪表盘顶部新增“今日进度”，合并展示今日/最近体重、初始体重、目标体重和还需变化；原独立“进展概览”卡片已合并进该模块。
+- 仪表盘新增“今日任务”，基于今日体重、饮食和运动记录展示称重、饮食、运动、复盘四项任务完成状态、完成度和连续记录天数；原“快速打卡”入口已收敛到任务卡片。
 - 顶部栏和仪表盘欢迎语优先使用用户昵称，未设置时回退邮箱；右上角昵称和头像区域可点击跳转到 `/dashboard/profile`。
 - 首页、仪表盘和体重、围度、饮食、运动记录页共用 `RecordPrincipleNotice`，提示记录用于复盘、请尽量真实填写、历史记录暂不支持修改；今日误录仍按各页面已有能力删除或重新记录，不扩展任意历史编辑能力。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
@@ -111,6 +114,8 @@ Firebase Auth 工具函数：
 - `firebaseSignUp`
 - `firebaseSignIn`
 - `firebaseSignOut`
+- `firebaseReauthenticateWithPassword`
+- `firebaseDeleteCurrentUser`
 - `firebaseOnAuthStateChanged`
 
 ### `src/contexts/AuthContext.tsx`
@@ -150,6 +155,22 @@ users/{userId}
 - `createUserProfile`
 - `getUserProfile`
 - `updateUserProfile`
+- `clearUserHistoryData`
+- `deleteUserData`
+
+账号数据管理规则：
+
+- 清除历史数据会删除记录、计划、食材、体重目标和菜谱偏好，但保留 Firebase Auth 账号、邮箱、昵称、身高、性别、出生年份和活动水平。
+- 注销账号需要输入当前密码重新认证；认证通过后清理用户数据，删除 `users/{userId}` 文档，再删除 Firebase Auth 账号。
+- 清理范围包括：
+  - `records/{userId}/daily/{date}/weight`
+  - `records/{userId}/daily/{date}/measurement`
+  - `records/{userId}/daily/{date}/food`
+  - `records/{userId}/daily/{date}/exercise`
+  - `plans/{userId}/weekly`
+  - `ingredients/{userId}/items`
+  - `reviews/{userId}/weekly`
+- 当前项目未使用 Firebase Admin SDK，清理操作由浏览器端 Firebase SDK 按已知集合路径执行。
 
 ### 每日记录
 
@@ -174,6 +195,7 @@ records/{userId}/daily/{date}/exercise/{recordId}
 - `getFoodHistory`
 - `addExerciseRecord`
 - `getExerciseHistory`
+- `getRecordPresenceHistory`
 - `getWeeklyData`
 
 仪表盘体重显示规则：

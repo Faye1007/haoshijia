@@ -9,6 +9,10 @@ import {
   orderBy,
   Timestamp,
   deleteDoc,
+  writeBatch,
+  deleteField,
+  DocumentReference,
+  DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -61,6 +65,92 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 export const updateUserProfile = async (userId: string, data: Record<string, unknown>) => {
   const userRef = doc(db, "users", userId);
   await setDoc(userRef, data, { merge: true });
+};
+
+const recordTypes = ["weight", "measurement", "food", "exercise"] as const;
+const clearConfirmStartDate = new Date("2024-01-01T00:00:00");
+
+const getDateRange = (startDate?: Date | null) => {
+  const dates: string[] = [];
+  const start = startDate && Number.isFinite(startDate.getTime())
+    ? new Date(startDate)
+    : clearConfirmStartDate;
+  const end = new Date();
+
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+
+  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+    dates.push(cursor.toISOString().split("T")[0]);
+  }
+
+  return dates;
+};
+
+const commitDeletedRefs = async (refs: DocumentReference<DocumentData>[]) => {
+  for (let index = 0; index < refs.length; index += 450) {
+    const batch = writeBatch(db);
+    refs.slice(index, index + 450).forEach((ref) => batch.delete(ref));
+    await batch.commit();
+  }
+};
+
+const deleteCollectionDocs = async (
+  collectionPath: string[]
+) => {
+  const [rootPath, ...pathSegments] = collectionPath;
+  if (!rootPath) return;
+
+  const snapshot = await getDocs(collection(db, rootPath, ...pathSegments));
+  await commitDeletedRefs(snapshot.docs.map((recordDoc) => recordDoc.ref));
+};
+
+const deleteKnownUserSubcollections = async (
+  userId: string,
+  startDate?: Date | null
+) => {
+  const dates = getDateRange(startDate);
+
+  for (const date of dates) {
+    for (const recordType of recordTypes) {
+      await deleteCollectionDocs(["records", userId, "daily", date, recordType]);
+    }
+  }
+
+  await deleteCollectionDocs(["plans", userId, "weekly"]);
+  await deleteCollectionDocs(["ingredients", userId, "items"]);
+  await deleteCollectionDocs(["reviews", userId, "weekly"]);
+};
+
+export const clearUserHistoryData = async (
+  userId: string,
+  startDate?: Date | null
+) => {
+  await deleteKnownUserSubcollections(userId, startDate);
+
+  const userRef = doc(db, "users", userId);
+  await setDoc(
+    userRef,
+    {
+      currentWeight: deleteField(),
+      targetWeight: deleteField(),
+      targetDate: deleteField(),
+      recipeSettings: deleteField(),
+    },
+    { merge: true }
+  );
+};
+
+export const deleteUserData = async (
+  userId: string,
+  startDate?: Date | null
+) => {
+  await clearUserHistoryData(userId, startDate);
+  await deleteDoc(doc(db, "users", userId));
+  await deleteDoc(doc(db, "records", userId));
+  await deleteDoc(doc(db, "plans", userId));
+  await deleteDoc(doc(db, "ingredients", userId));
+  await deleteDoc(doc(db, "reviews", userId));
 };
 
 export const addDailyRecord = async (
@@ -393,6 +483,45 @@ export const getExerciseHistory = async (
   const snapshot = await getDocs(q);
 
   return snapshot.docs.map((doc) => normalizeExerciseRecord(doc.id, doc.data()));
+};
+
+export interface RecordPresence {
+  date: string;
+  weight: boolean;
+  measurement: boolean;
+  food: boolean;
+  exercise: boolean;
+}
+
+export const getRecordPresenceHistory = async (
+  userId: string,
+  days: number = 14
+): Promise<RecordPresence[]> => {
+  const records: RecordPresence[] = [];
+  const today = new Date();
+
+  for (let i = 0; i < days; i++) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split("T")[0];
+    const presence: RecordPresence = {
+      date: dateStr,
+      weight: false,
+      measurement: false,
+      food: false,
+      exercise: false,
+    };
+
+    for (const recordType of recordTypes) {
+      const recordRef = collection(db, "records", userId, "daily", dateStr, recordType);
+      const snapshot = await getDocs(recordRef);
+      presence[recordType] = !snapshot.empty;
+    }
+
+    records.push(presence);
+  }
+
+  return records;
 };
 
 export const getWeeklyData = async (
