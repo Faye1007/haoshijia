@@ -108,27 +108,27 @@ export default function ReviewPage() {
         <TabsContent value="daily" className="space-y-6">
           {dailyReview ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-zinc-500">今日执行度</CardTitle>
+                  <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                    <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">今日执行度</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                     <div className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5 text-blue-500" />
-                      <span className="text-3xl font-bold text-blue-600">{dailyReview.executionRate}%</span>
+                      <TrendingUp className="h-4 w-4 shrink-0 text-blue-500 sm:h-5 sm:w-5" />
+                      <span className="text-2xl font-bold text-blue-600 sm:text-3xl">{dailyReview.executionRate}%</span>
                     </div>
                   </CardContent>
                 </Card>
 
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-zinc-500">触发性进食</CardTitle>
+                  <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                    <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">触发性进食</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                     <div className="flex items-center gap-2">
-                      <AlertCircle className="h-5 w-5 text-orange-500" />
-                      <span className="text-3xl font-bold text-orange-600">{dailyReview.triggerCount} 次</span>
+                      <AlertCircle className="h-4 w-4 shrink-0 text-orange-500 sm:h-5 sm:w-5" />
+                      <span className="text-2xl font-bold text-orange-600 sm:text-3xl">{dailyReview.triggerCount} 次</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -143,7 +143,7 @@ export default function ReviewPage() {
                   <CardDescription>基于今日饮食记录自动生成</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="p-4 bg-zinc-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4 text-green-500" />
@@ -188,7 +188,7 @@ export default function ReviewPage() {
         <TabsContent value="weekly" className="space-y-6">
           {weeklyReview ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-zinc-500">体重周变化</CardTitle>
@@ -250,7 +250,7 @@ export default function ReviewPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="p-4 bg-zinc-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Scale className="h-4 w-4 text-blue-500" />
@@ -269,7 +269,7 @@ export default function ReviewPage() {
                       </span>
                     </div>
 
-                    <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                    <div className="p-4 bg-zinc-50 rounded-lg col-span-2">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4 text-green-500" />
                         <span className="font-medium">做得好的事</span>

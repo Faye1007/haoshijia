@@ -217,26 +217,26 @@ export default function ExercisePage() {
 
       <RecordPrincipleNotice />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">今日运动次数</CardTitle>
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">今日运动次数</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             <div className="flex items-center gap-2">
-              <Dumbbell className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">{todayRecords.length} 次</span>
+              <Dumbbell className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+              <span className="text-lg font-bold sm:text-2xl">{todayRecords.length} 次</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">运动量记录</CardTitle>
+        <Card className="order-3 col-span-2 md:order-none md:col-span-1">
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">运动量记录</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-zinc-400" />
+              <Clock className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
               <span className="text-lg font-bold break-words">
                 {amountSummary || "未记录"}
               </span>
@@ -244,14 +244,14 @@ export default function ExercisePage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">消耗卡路里</CardTitle>
+        <Card className="order-2 md:order-none">
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">消耗卡路里</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             <div className="flex items-center gap-2">
-              <Flame className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">{totalCalories} kcal</span>
+              <Flame className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+              <span className="text-lg font-bold sm:text-2xl">{totalCalories} kcal</span>
             </div>
           </CardContent>
         </Card>

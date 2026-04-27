@@ -340,17 +340,17 @@ export default function WeightPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">今日体重</CardTitle>
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">今日体重</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             {displayWeight ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <Scale className="h-5 w-5 text-zinc-400" />
-                  <span className="text-2xl font-bold">{displayWeight.weight} kg</span>
+                  <Scale className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+                  <span className="text-lg font-bold sm:text-2xl">{displayWeight.weight} kg</span>
                 </div>
                 <div className="text-xs text-zinc-500">
                   {displayWeight.source === "today"
@@ -365,13 +365,13 @@ export default function WeightPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">初始体重</CardTitle>
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">初始体重</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             <div className="flex items-center gap-2">
-              <Scale className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">
+              <Scale className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+              <span className="text-lg font-bold sm:text-2xl">
                 {profile?.currentWeight ? `${profile.currentWeight} kg` : "--"}
               </span>
             </div>
@@ -379,13 +379,13 @@ export default function WeightPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">目标体重</CardTitle>
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">目标体重</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             <div className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-zinc-400" />
-              <span className="text-2xl font-bold">
+              <Target className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+              <span className="text-lg font-bold sm:text-2xl">
                 {profile?.targetWeight ? `${profile.targetWeight} kg` : "--"}
               </span>
             </div>
@@ -393,19 +393,19 @@ export default function WeightPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">剩余差距</CardTitle>
+          <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+            <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">剩余差距</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
             <div className="flex items-center gap-2">
               {targetDiff !== null && targetDiff < 0 ? (
-                <TrendingDown className="h-5 w-5 text-green-500" />
+                <TrendingDown className="h-4 w-4 shrink-0 text-green-500 sm:h-5 sm:w-5" />
               ) : targetDiff !== null && targetDiff > 0 ? (
-                <TrendingUp className="h-5 w-5 text-red-500" />
+                <TrendingUp className="h-4 w-4 shrink-0 text-red-500 sm:h-5 sm:w-5" />
               ) : (
-                <Minus className="h-5 w-5 text-zinc-400" />
+                <Minus className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
               )}
-              <span className="text-2xl font-bold">
+              <span className="text-lg font-bold sm:text-2xl">
                 {targetDiff !== null ? `${targetDiff.toFixed(1)} kg` : "--"}
               </span>
             </div>
@@ -483,7 +483,7 @@ export default function WeightPage() {
               </div>
 
               {estimatedWeeks && goalFormData.targetDate && (
-                <div className="p-4 bg-zinc-50 rounded-lg grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div className="p-4 bg-zinc-50 rounded-lg grid grid-cols-3 gap-2 text-sm md:gap-3">
                   <div>
                     <div className="text-zinc-500">预计周期</div>
                     <div className="font-medium">{estimatedWeeks} 周</div>

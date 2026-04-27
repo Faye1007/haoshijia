@@ -281,13 +281,13 @@ export default function DashboardPage() {
           <CardDescription>先看当前体重和目标差距，再决定今天要补哪些记录</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_2fr]">
-            <div className="rounded-lg border border-green-200 bg-green-50/75 p-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1.15fr_2fr]">
+            <div className="rounded-lg border border-green-200 bg-green-50/75 p-3 sm:p-4">
               <div className="flex items-center gap-2 text-sm font-medium text-green-800">
                 <Scale className="h-4 w-4" />
                 {visibleDisplayWeight?.source === "today" ? "今日体重" : "最近体重"}
               </div>
-              <div className="mt-3 text-3xl font-bold text-zinc-900">
+              <div className="mt-3 text-2xl font-bold text-zinc-900 sm:text-3xl">
                 {visibleDisplayWeight ? `${visibleDisplayWeight.weight} kg` : "未记录"}
               </div>
               <div className="mt-1 text-xs text-zinc-500">
@@ -299,22 +299,22 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-zinc-200 bg-white/70 p-4">
+            <div className="contents lg:grid lg:grid-cols-3 lg:gap-3">
+              <div className="rounded-lg border border-zinc-200 bg-white/70 p-3 sm:p-4">
                 <div className="text-sm text-zinc-500">初始体重</div>
-                <div className="mt-2 text-2xl font-bold text-zinc-900">
+                <div className="mt-2 text-xl font-bold text-zinc-900 sm:text-2xl">
                   {visibleProfile?.currentWeight ? `${visibleProfile.currentWeight} kg` : "未设置"}
                 </div>
               </div>
-              <div className="rounded-lg border border-zinc-200 bg-white/70 p-4">
+              <div className="rounded-lg border border-zinc-200 bg-white/70 p-3 sm:p-4">
                 <div className="text-sm text-zinc-500">目标体重</div>
-                <div className="mt-2 text-2xl font-bold text-zinc-900">
+                <div className="mt-2 text-xl font-bold text-zinc-900 sm:text-2xl">
                   {visibleProfile?.targetWeight ? `${visibleProfile.targetWeight} kg` : "未设置"}
                 </div>
               </div>
-              <div className="rounded-lg border border-green-200 bg-green-50/80 p-4 text-green-950">
+              <div className="rounded-lg border border-green-200 bg-green-50/80 p-3 text-green-950 sm:p-4">
                 <div className="text-sm text-green-700">还需变化</div>
-                <div className="mt-2 text-2xl font-bold text-zinc-900">
+                <div className="mt-2 text-xl font-bold text-zinc-900 sm:text-2xl">
                   {remainingWeight !== null ? `${remainingWeight.toFixed(1)} kg` : "--"}
                 </div>
                 <div className="mt-1 text-xs text-zinc-500">
@@ -368,14 +368,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               {taskItems.map((task) => {
                 const TaskIcon = task.icon;
                 return (
                   <a
                     key={task.href}
                     href={task.href}
-                    className="group rounded-md border border-stone-200 bg-white p-4 text-zinc-950 transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(108,93,72,0.14)]"
+                    className="group rounded-md border border-stone-200 bg-white p-3 text-zinc-950 transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(108,93,72,0.14)] sm:p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className={`rounded-md border p-2 ${task.accent}`}>
@@ -393,9 +393,9 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-4">
-                      <div className="font-semibold">{task.title}</div>
-                      <div className="mt-1 text-sm text-zinc-500">{task.description}</div>
+                    <div className="mt-3 sm:mt-4">
+                      <div className="text-sm font-semibold sm:text-base">{task.title}</div>
+                      <div className="mt-1 text-xs text-zinc-500 sm:text-sm">{task.description}</div>
                     </div>
                   </a>
                 );
@@ -470,7 +470,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {secondaryMeasurementKeys.map((key) => {
                   const summary = visibleMeasurementSummary[key];
 

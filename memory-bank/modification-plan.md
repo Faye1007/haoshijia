@@ -772,7 +772,7 @@
 - `npm run lint` 和 `npm run build` 通过。
 
 当前状态：
-- 待执行。
+- 已在 Step 50 完成，详见 `memory-bank/progress.md`。
 
 ---
 

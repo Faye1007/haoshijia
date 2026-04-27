@@ -403,39 +403,39 @@ export default function FoodPage() {
         </TabsList>
 
         <TabsContent value="daily" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-500">今日记录</CardTitle>
+              <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">今日记录</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                 <div className="flex items-center gap-2">
-                  <UtensilsCrossed className="h-5 w-5 text-zinc-400" />
-                  <span className="text-2xl font-bold">{totalRecords} 餐</span>
+                  <UtensilsCrossed className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+                  <span className="text-lg font-bold sm:text-2xl">{totalRecords} 餐</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-500">加餐次数</CardTitle>
+              <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">加餐次数</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-zinc-400" />
-                  <span className="text-2xl font-bold">{getSnackCount()} 次</span>
+                  <Clock className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+                  <span className="text-lg font-bold sm:text-2xl">{getSnackCount()} 次</span>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-zinc-500">平均饥饿度</CardTitle>
+              <CardHeader className="p-3 pb-1 sm:p-6 sm:pb-2">
+                <CardTitle className="text-xs font-medium text-zinc-500 sm:text-sm">平均饥饿度</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
                 <div className="flex items-center gap-2">
-                  <Star className="h-5 w-5 text-zinc-400" />
-                  <span className="text-2xl font-bold">
+                  <Star className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
+                  <span className="text-lg font-bold sm:text-2xl">
                     {totalRecords > 0 
                       ? (todayRecords.reduce((sum, r) => sum + r.hungerLevel, 0) / totalRecords).toFixed(1)
                       : "--"
@@ -466,7 +466,7 @@ export default function FoodPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div className="p-4 bg-zinc-50 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -483,7 +483,7 @@ export default function FoodPage() {
                     <span className="text-3xl font-bold text-orange-600">{review.triggerCount} 次</span>
                   </div>
 
-                  <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                  <div className="p-4 bg-zinc-50 rounded-lg col-span-2">
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle className="h-4 w-4 text-green-500" />
                       <span className="font-medium">做得好的事</span>
@@ -497,7 +497,7 @@ export default function FoodPage() {
                     </ul>
                   </div>
 
-                  <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                  <div className="p-4 bg-zinc-50 rounded-lg col-span-2">
                     <div className="flex items-center gap-2 mb-2">
                       <Lightbulb className="h-4 w-4 text-amber-500" />
                       <span className="font-medium">明日优先改进</span>
@@ -734,7 +734,7 @@ export default function FoodPage() {
             </Card>
           ) : weeklyReview ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-zinc-500">体重周变化</CardTitle>
@@ -796,7 +796,7 @@ export default function FoodPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="p-4 bg-zinc-50 rounded-lg">
                       <div className="flex items-center gap-2 mb-2">
                         <Scale className="h-4 w-4 text-blue-500" />
@@ -815,7 +815,7 @@ export default function FoodPage() {
                       </span>
                     </div>
 
-                    <div className="p-4 bg-zinc-50 rounded-lg md:col-span-2">
+                    <div className="p-4 bg-zinc-50 rounded-lg col-span-2">
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4 text-green-500" />
                         <span className="font-medium">做得好的事</span>
