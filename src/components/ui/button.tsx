@@ -5,16 +5,16 @@ import { type VariantProps, cva } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/70 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-600/35 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-zinc-950 text-white shadow-[0_10px_26px_rgba(24,24,27,0.22)] hover:-translate-y-0.5 hover:bg-zinc-800",
+        default: "bg-green-700 text-white shadow-[0_10px_24px_rgba(95,127,82,0.22)] hover:-translate-y-0.5 hover:bg-green-800",
         destructive: "bg-red-500 text-white shadow-[0_10px_24px_rgba(239,68,68,0.2)] hover:-translate-y-0.5 hover:bg-red-600",
-        outline: "border border-zinc-300 bg-white text-zinc-950 shadow-sm hover:-translate-y-0.5 hover:border-zinc-950 hover:bg-lime-50",
-        secondary: "bg-lime-100 text-lime-950 hover:bg-lime-200",
-        ghost: "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950",
-        link: "text-zinc-950 underline-offset-4 hover:text-red-600 hover:underline",
+        outline: "border border-stone-300 bg-white text-stone-900 shadow-sm hover:-translate-y-0.5 hover:border-green-700 hover:bg-green-50",
+        secondary: "bg-green-100 text-green-950 hover:bg-green-200",
+        ghost: "text-stone-700 hover:bg-stone-100 hover:text-stone-950",
+        link: "text-green-800 underline-offset-4 hover:text-red-600 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",

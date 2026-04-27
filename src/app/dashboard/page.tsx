@@ -141,7 +141,7 @@ export default function DashboardPage() {
       href: "/dashboard/weight",
       done: todayPresence.weight,
       icon: Scale,
-      accent: "bg-lime-100 text-lime-800 border-lime-200",
+      accent: "bg-green-100 text-green-800 border-green-200",
     },
     {
       title: "饮食",
@@ -282,8 +282,8 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_2fr]">
-            <div className="rounded-lg border border-lime-200 bg-lime-50/80 p-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-lime-800">
+            <div className="rounded-lg border border-green-200 bg-green-50/75 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-green-800">
                 <Scale className="h-4 w-4" />
                 {visibleDisplayWeight?.source === "today" ? "今日体重" : "最近体重"}
               </div>
@@ -312,12 +312,12 @@ export default function DashboardPage() {
                   {visibleProfile?.targetWeight ? `${visibleProfile.targetWeight} kg` : "未设置"}
                 </div>
               </div>
-              <div className="rounded-lg border border-zinc-900 bg-zinc-950 p-4 text-white">
-                <div className="text-sm text-zinc-300">还需变化</div>
-                <div className="mt-2 text-2xl font-bold">
+              <div className="rounded-lg border border-green-200 bg-green-50/80 p-4 text-green-950">
+                <div className="text-sm text-green-700">还需变化</div>
+                <div className="mt-2 text-2xl font-bold text-zinc-900">
                   {remainingWeight !== null ? `${remainingWeight.toFixed(1)} kg` : "--"}
                 </div>
-                <div className="mt-1 text-xs text-zinc-400">
+                <div className="mt-1 text-xs text-zinc-500">
                   {remainingWeight !== null ? "按最近体重计算" : "设置目标后显示"}
                 </div>
               </div>
@@ -326,43 +326,43 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden border-zinc-900 bg-zinc-950 text-white shadow-[0_20px_60px_rgba(15,23,42,0.22)]">
+      <Card className="overflow-hidden border-stone-200 bg-[#fff8ec]/92 shadow-[0_20px_54px_rgba(108,93,72,0.14)]">
         <CardContent className="p-5 md:p-6">
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_1.6fr]">
             <div className="space-y-4">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-medium text-lime-200">
+                <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-800">
                   <Trophy className="h-3.5 w-3.5" />
                   今日任务
                 </div>
-                <h3 className="mt-3 text-2xl font-bold">完成度 {completionPercent}%</h3>
-                <p className="mt-1 text-sm text-zinc-300">
+                <h3 className="mt-3 text-2xl font-bold text-zinc-900">完成度 {completionPercent}%</h3>
+                <p className="mt-1 text-sm text-zinc-600">
                   {user ? "把记录当成每日闯关，完成后再看复盘。" : "登录后会显示你的今日任务进度。"}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-md border border-white/10 bg-white/10 p-3">
-                  <div className="flex items-center gap-2 text-sm text-zinc-300">
-                    <CheckCircle2 className="h-4 w-4 text-lime-300" />
+                <div className="rounded-md border border-green-100 bg-white/70 p-3">
+                  <div className="flex items-center gap-2 text-sm text-zinc-600">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
                     已完成
                   </div>
-                  <div className="mt-2 text-2xl font-bold">
+                  <div className="mt-2 text-2xl font-bold text-zinc-900">
                     {completedTaskCount}/{taskItems.length}
                   </div>
                 </div>
-                <div className="rounded-md border border-white/10 bg-white/10 p-3">
-                  <div className="flex items-center gap-2 text-sm text-zinc-300">
-                    <Flame className="h-4 w-4 text-yellow-300" />
+                <div className="rounded-md border border-amber-100 bg-white/70 p-3">
+                  <div className="flex items-center gap-2 text-sm text-zinc-600">
+                    <Flame className="h-4 w-4 text-amber-500" />
                     连续记录
                   </div>
-                  <div className="mt-2 text-2xl font-bold">{streakDays} 天</div>
+                  <div className="mt-2 text-2xl font-bold text-zinc-900">{streakDays} 天</div>
                 </div>
               </div>
 
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-2 overflow-hidden rounded-full bg-stone-200/80">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-lime-300 via-yellow-300 to-red-400 transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-green-500 via-amber-300 to-red-400 transition-all"
                   style={{ width: `${completionPercent}%` }}
                 />
               </div>
@@ -375,14 +375,14 @@ export default function DashboardPage() {
                   <a
                     key={task.href}
                     href={task.href}
-                    className="group rounded-md border border-white/10 bg-white p-4 text-zinc-950 transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(0,0,0,0.18)]"
+                    className="group rounded-md border border-stone-200 bg-white p-4 text-zinc-950 transition-transform hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(108,93,72,0.14)]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className={`rounded-md border p-2 ${task.accent}`}>
                         <TaskIcon className="h-5 w-5" />
                       </div>
                       {task.done ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2 py-1 text-xs font-medium text-lime-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           已完成
                         </span>

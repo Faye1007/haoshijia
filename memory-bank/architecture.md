@@ -86,13 +86,14 @@ haoshijia/
 - 顶部栏和仪表盘欢迎语优先使用用户昵称，未设置时回退邮箱；右上角昵称和头像区域可点击跳转到 `/dashboard/profile`。
 - 首页、仪表盘和体重、围度、饮食、运动记录页共用 `RecordPrincipleNotice`，提示记录用于复盘、请尽量真实填写、历史记录暂不支持修改；今日误录仍按各页面已有能力删除或重新记录，不扩展任意历史编辑能力。
 - UI 使用 Tailwind CSS v4 + shadcn/ui 基础组件。
-- 全局视觉风格已调整为数据游戏化记录工具：
-  - `src/app/globals.css` 定义纸白网格底、炭黑主色、lime 状态色和少量红黄蓝任务点缀。
-  - dashboard shell 使用纸白网格背景；侧边栏使用深色导航，当前页面以 lime 高亮；顶部栏使用白底高对比样式。
-  - Card、Button、Input、Select、Dialog 等基础 UI 组件统一采用黑白底、清晰边框、轻阴影和 lime focus 状态。
+- 全局视觉风格已从高对比游戏化调和为轻食手账风格：
+  - `src/app/globals.css` 定义更轻的纸白米色方格背景、深橄榄灰文字、柔和鼠尾草绿主色和少量暖色任务点缀。
+  - dashboard shell 使用纸白米色方格背景；侧边栏使用暖白 / 极浅米色导航，当前页面以浅绿底和深绿文字高亮；顶部栏使用半透明暖白样式。
+  - Card、Button、Input、Select、Dialog、Sheet 等基础 UI 组件统一采用暖白底、浅燕麦边框、轻阴影和柔和绿色 focus 状态。
+  - Dashboard 导航图标使用 `lucide-react` 图标，不再维护手写 SVG path。
   - 打印样式仍集中在 `globals.css` 的 `@media print` 中，保持白底、隐藏后台导航，并只放行菜谱打印区域。
 - 图表使用 Recharts。
-- 图标使用 lucide-react，部分导航图标当前仍为内联 SVG path。
+- 图标使用 lucide-react。
 - 日复盘和周复盘分析逻辑集中在 `src/lib/review.ts`，饮食记录页与独立复盘页共用同一套计算规则。
 
 ## Firebase 集成

@@ -2,99 +2,99 @@
 
 @layer base {
   :root {
-    --background: #f7f4ee;
-    --foreground: #171717;
-    --card: rgb(255 255 255 / 0.92);
-    --card-foreground: #171717;
-    --popover: rgb(255 255 255 / 0.96);
-    --popover-foreground: #171717;
-    --primary: #18181b;
+    --background: #f8f3ea;
+    --foreground: #2f3428;
+    --card: rgb(255 253 247 / 0.94);
+    --card-foreground: #2f3428;
+    --popover: rgb(255 253 247 / 0.98);
+    --popover-foreground: #2f3428;
+    --primary: #5f7f52;
     --primary-foreground: #fffdf7;
-    --secondary: #f4f4f5;
-    --secondary-foreground: #27272a;
-    --muted: #f1ede5;
-    --muted-foreground: #71717a;
-    --accent: #d9f99d;
-    --accent-foreground: #3f6212;
+    --secondary: #eef3e8;
+    --secondary-foreground: #42523a;
+    --muted: #f1eadf;
+    --muted-foreground: #7a756b;
+    --accent: #e5f0dc;
+    --accent-foreground: #425f36;
     --destructive: #ef4444;
     --destructive-foreground: #fff7ed;
-    --border: rgb(39 39 42 / 0.14);
-    --input: rgb(39 39 42 / 0.18);
-    --ring: #a3e635;
+    --border: rgb(108 93 72 / 0.18);
+    --input: rgb(108 93 72 / 0.22);
+    --ring: #89a978;
     --radius: 0.5rem;
   }
 }
 
 html {
   min-height: 100%;
-  background: #f7f4ee;
+  background: #f8f3ea;
 }
 
 body {
   min-height: 100%;
   background:
-    linear-gradient(90deg, rgb(23 23 23 / 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(23 23 23 / 0.035) 1px, transparent 1px),
-    linear-gradient(135deg, #fffdf7 0%, #f7f4ee 54%, #f1ede5 100%);
+    linear-gradient(90deg, rgb(95 127 82 / 0.024) 1px, transparent 1px),
+    linear-gradient(180deg, rgb(95 127 82 / 0.024) 1px, transparent 1px),
+    linear-gradient(135deg, #fffdf7 0%, #f8f3ea 56%, #f2eadc 100%);
   background-size: 28px 28px, 28px 28px, auto;
   color: var(--foreground);
 }
 
 ::selection {
-  background: rgb(217 249 157 / 0.82);
-  color: #18181b;
+  background: rgb(229 240 220 / 0.94);
+  color: #2f3428;
 }
 
 .app-aurora-bg {
   background:
-    linear-gradient(90deg, rgb(23 23 23 / 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgb(23 23 23 / 0.04) 1px, transparent 1px),
-    linear-gradient(135deg, #fffdf7 0%, #f7f4ee 56%, #f1ede5 100%);
+    linear-gradient(90deg, rgb(95 127 82 / 0.028) 1px, transparent 1px),
+    linear-gradient(180deg, rgb(95 127 82 / 0.028) 1px, transparent 1px),
+    linear-gradient(135deg, #fffdf7 0%, #f8f3ea 58%, #f0e7d8 100%);
   background-size: 30px 30px, 30px 30px, auto;
 }
 
 .dashboard-main .bg-zinc-50 {
-  background-color: rgb(250 250 250 / 0.86);
+  background-color: rgb(255 253 247 / 0.88);
 }
 
 .dashboard-main .bg-zinc-100 {
-  background-color: rgb(244 244 245 / 0.9);
+  background-color: rgb(241 234 223 / 0.9);
 }
 
 .dashboard-main .bg-zinc-200 {
-  background-color: rgb(228 228 231 / 0.9);
+  background-color: rgb(224 213 197 / 0.9);
 }
 
 .dashboard-main .bg-zinc-900 {
-  background-color: #18181b;
+  background-color: #5f7f52;
 }
 
 .dashboard-main .border-zinc-200 {
-  border-color: rgb(39 39 42 / 0.14);
+  border-color: rgb(108 93 72 / 0.16);
 }
 
 .dashboard-main .text-zinc-900 {
-  color: #18181b;
+  color: #2f3428;
 }
 
 .dashboard-main .text-zinc-800 {
-  color: #27272a;
+  color: #3f4637;
 }
 
 .dashboard-main .text-zinc-700 {
-  color: #3f3f46;
+  color: #525a48;
 }
 
 .dashboard-main .text-zinc-600 {
-  color: #52525b;
+  color: #666b5d;
 }
 
 .dashboard-main .text-zinc-500 {
-  color: #71717a;
+  color: #7a756b;
 }
 
 .dashboard-main .text-zinc-400 {
-  color: #a1a1aa;
+  color: #aaa293;
 }
 
 .print-only {
