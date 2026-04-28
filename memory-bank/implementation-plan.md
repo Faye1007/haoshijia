@@ -1325,6 +1325,53 @@
 - 本地启动 `npm run dev -- --port 3001` 后，`/dashboard`、`/dashboard/food`、`/dashboard/review` 均返回 `200 OK`。
 - 用户验收通过。
 
+---
+
+## 阶段十六：体重单位与周复盘偏好增强（Step 51 已完成）
+
+本阶段来自 2026-04-28 的新反馈。执行时仍需按项目 Step Workflow 在 Step 开始前确认范围，完成后先运行验证命令，再等待用户验收。
+
+### Step 51: 体重单位切换与周复盘饮食偏好输出
+**任务目标**：
+- 体重页支持 `kg / 斤` 切换，降低日常记录成本。
+- 周复盘增加“用户倾向吃什么、偏向什么做法”的输出，供用户参考，也为后续菜谱生成优化提供依据。
+
+**修改范围**：
+- `src/app/dashboard/weight/page.tsx`
+  - 增加体重单位状态和切换控件。
+  - 表单输入、目标设置、顶部摘要、今日记录、趋势说明和删除确认文案跟随单位展示。
+  - 保存前将斤换算为 kg；读取后按当前单位展示。
+- `src/lib/review.ts`
+  - 扩展 `WeeklyReview` 类型，新增饮食偏好分析结果。
+  - 从本周 `foodDescription` 中做轻量关键词统计，输出常见食物/食材、偏好做法和参考建议。
+- `src/app/dashboard/food/page.tsx`
+  - 在周复盘区域展示饮食偏好结果。
+- `src/app/dashboard/review/page.tsx`
+  - 在独立复盘页的周复盘区域展示同一份饮食偏好结果。
+
+**边界规则**：
+- Firestore 里的 `weight`、`currentWeight`、`targetWeight` 继续统一保存 kg，不做历史数据迁移。
+- BMI、营养估算、目标差距等内部计算继续使用 kg。
+- 饮食偏好先按本周记录即时生成，不新增 Firestore 字段，不持久化结果。
+- 本轮不把饮食偏好直接接入菜谱生成算法，避免样本不足时影响菜单稳定性。
+
+**验证方式**：
+- 运行 `npm run lint`。
+- 运行 `npm run build`。
+- 手动检查 `/dashboard/weight` 在 `kg / 斤` 两种单位下的输入、保存、摘要、今日记录和趋势文案。
+- 手动检查 `/dashboard/food` 和 `/dashboard/review` 的周复盘偏好输出与空状态。
+
+**影响文档**：
+- 用户验收通过后更新 `memory-bank/progress.md`。
+- 如体重展示口径、周复盘输出结构确认稳定，同步更新 `memory-bank/architecture.md`。
+
+**当前状态**：
+- 已完成，完成日期：2026-04-28。
+- `npm run lint` 通过。
+- `npm run build` 通过。
+- 本地启动 `npm run dev -- --port 3001` 后，`/dashboard/weight`、`/dashboard/food`、`/dashboard/review` 均返回 `200 OK`。
+- 用户验收通过。
+
 执行规则：
 
 - Step 22-28 已按顺序完成并记录完成说明。

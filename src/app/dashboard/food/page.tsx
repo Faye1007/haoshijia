@@ -884,6 +884,53 @@ export default function FoodPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
+                    <UtensilsCrossed className="h-5 w-5 text-emerald-500" />
+                    本周饮食偏好
+                  </CardTitle>
+                  <CardDescription>根据本周饮食记录即时总结，供你和后续菜谱安排参考</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <div className="mb-2 text-sm font-medium text-zinc-600">常出现的食物</div>
+                      {weeklyReview.foodPreference.foods.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {weeklyReview.foodPreference.foods.map((item) => (
+                            <span key={item.name} className="rounded-full bg-white px-3 py-1 text-sm text-zinc-700">
+                              {item.name} · {item.count} 次
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-zinc-500">本周还看不出稳定食物偏好</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-lg bg-zinc-50 p-3">
+                      <div className="mb-2 text-sm font-medium text-zinc-600">偏向的做法</div>
+                      {weeklyReview.foodPreference.methods.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {weeklyReview.foodPreference.methods.map((item) => (
+                            <span key={item.name} className="rounded-full bg-white px-3 py-1 text-sm text-zinc-700">
+                              {item.name} · {item.count} 次
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-zinc-500">本周还看不出稳定做法偏好</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+                    {weeklyReview.foodPreference.note}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-amber-500" />
                     下周可执行策略
                   </CardTitle>

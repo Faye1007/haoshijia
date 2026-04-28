@@ -59,9 +59,32 @@ interface GoalFormErrors {
   targetDate?: string;
 }
 
+type WeightUnit = "kg" | "jin";
+
+const weightUnitLabels: Record<WeightUnit, string> = {
+  kg: "kg",
+  jin: "斤",
+};
+
+const toKg = (value: number, unit: WeightUnit) => unit === "jin" ? value / 2 : value;
+const fromKg = (value: number, unit: WeightUnit) => unit === "jin" ? value * 2 : value;
+
+const normalizeWeight = (value: number) => Number(value.toFixed(2));
+
+const formatWeightNumber = (value: number) => {
+  return new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 2,
+  }).format(value);
+};
+
+const formatWeightInput = (value: number) => {
+  return Number(value.toFixed(2)).toString();
+};
+
 export default function WeightPage() {
   const { user } = useAuth();
   const [weight, setWeight] = useState("");
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>("kg");
   const [recordTime, setRecordTime] = useState("");
   const [isMorning, setIsMorning] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +110,12 @@ export default function WeightPage() {
   });
 
   const today = new Date().toISOString().split("T")[0];
+  const unitLabel = weightUnitLabels[weightUnit];
+  const recordMin = weightUnit === "jin" ? 40 : 20;
+  const recordMax = weightUnit === "jin" ? 600 : 300;
+  const goalMin = weightUnit === "jin" ? 60 : 30;
+  const goalMax = weightUnit === "jin" ? 600 : 300;
+  const displayWeightValue = (weightKg: number) => formatWeightNumber(fromKg(weightKg, weightUnit));
 
   const loadTodayRecords = useCallback(async () => {
     if (!user) {
@@ -124,12 +153,12 @@ export default function WeightPage() {
     if (profileData) {
       setGoalFormData((prev) => ({
         ...prev,
-        ...(profileData.currentWeight ? { currentWeight: profileData.currentWeight.toString() } : {}),
-        ...(profileData.targetWeight ? { targetWeight: profileData.targetWeight.toString() } : {}),
+        ...(profileData.currentWeight ? { currentWeight: formatWeightInput(fromKg(profileData.currentWeight, weightUnit)) } : {}),
+        ...(profileData.targetWeight ? { targetWeight: formatWeightInput(fromKg(profileData.targetWeight, weightUnit)) } : {}),
         ...(profileData.targetDate ? { targetDate: profileData.targetDate.toISOString().split("T")[0] } : {}),
       }));
     }
-  }, [today, user]);
+  }, [today, user, weightUnit]);
 
   const refreshWeightData = useCallback(async () => {
     await Promise.all([loadTodayRecords(), loadHistory(), loadGoalData()]);
@@ -147,8 +176,9 @@ export default function WeightPage() {
     }
 
     const weightNum = parseFloat(weight);
-    if (isNaN(weightNum) || weightNum < 20 || weightNum > 300) {
-      setError("请输入有效的体重 (20-300 kg)");
+    const weightKg = toKg(weightNum, weightUnit);
+    if (isNaN(weightNum) || isNaN(weightKg) || weightKg < 20 || weightKg > 300) {
+      setError(`请输入有效的体重 (${recordMin}-${recordMax} ${unitLabel})`);
       return;
     }
 
@@ -157,7 +187,7 @@ export default function WeightPage() {
 
     try {
       await addDailyRecord(user.uid, today, "weight", {
-        weight: weightNum,
+        weight: normalizeWeight(weightKg),
         recordTime: recordTime || new Date().toISOString(),
         isMorning,
       });
@@ -199,19 +229,19 @@ export default function WeightPage() {
 
   const validateGoal = (): boolean => {
     const newErrors: GoalFormErrors = {};
-    const current = parseFloat(goalFormData.currentWeight);
-    const target = parseFloat(goalFormData.targetWeight);
+    const current = toKg(parseFloat(goalFormData.currentWeight), weightUnit);
+    const target = toKg(parseFloat(goalFormData.targetWeight), weightUnit);
 
     if (!goalFormData.currentWeight) {
       newErrors.currentWeight = "请输入初始体重";
     } else if (isNaN(current) || current < 30 || current > 300) {
-      newErrors.currentWeight = "体重应在 30-300 kg 之间";
+      newErrors.currentWeight = `体重应在 ${goalMin}-${goalMax} ${unitLabel} 之间`;
     }
 
     if (!goalFormData.targetWeight) {
       newErrors.targetWeight = "请输入目标体重";
     } else if (isNaN(target) || target < 30 || target > 300) {
-      newErrors.targetWeight = "目标体重应在 30-300 kg 之间";
+      newErrors.targetWeight = `目标体重应在 ${goalMin}-${goalMax} ${unitLabel} 之间`;
     } else if (!isNaN(current) && target >= current) {
       newErrors.targetWeight = "目标体重必须小于初始体重";
     }
@@ -235,8 +265,8 @@ export default function WeightPage() {
     setIsSaving(true);
     try {
       await updateUserProfile(user.uid, {
-        currentWeight: parseFloat(goalFormData.currentWeight),
-        targetWeight: parseFloat(goalFormData.targetWeight),
+        currentWeight: normalizeWeight(toKg(parseFloat(goalFormData.currentWeight), weightUnit)),
+        targetWeight: normalizeWeight(toKg(parseFloat(goalFormData.targetWeight), weightUnit)),
         targetDate: new Date(goalFormData.targetDate),
       });
       setGoalSaveSuccess(true);
@@ -257,6 +287,27 @@ export default function WeightPage() {
     }
   };
 
+  const handleWeightUnitChange = (nextUnit: WeightUnit) => {
+    if (nextUnit === weightUnit) return;
+
+    const convertValue = (value: string) => {
+      const parsed = parseFloat(value);
+      if (isNaN(parsed)) return value;
+      const kgValue = toKg(parsed, weightUnit);
+      return formatWeightInput(fromKg(kgValue, nextUnit));
+    };
+
+    setWeight((prev) => convertValue(prev));
+    setGoalFormData((prev) => ({
+      ...prev,
+      currentWeight: convertValue(prev.currentWeight),
+      targetWeight: convertValue(prev.targetWeight),
+    }));
+    setGoalErrors({});
+    setError("");
+    setWeightUnit(nextUnit);
+  };
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
   };
@@ -270,7 +321,7 @@ export default function WeightPage() {
     if (viewDays !== 7) {
       return historyData.map((point) => ({
         date: formatDate(point.date),
-        weight: point.weight,
+        weight: fromKg(point.weight, weightUnit),
       }));
     }
 
@@ -284,23 +335,24 @@ export default function WeightPage() {
 
       return {
         date: formatDate(dateStr),
-        weight: historyByDate.get(dateStr) ?? null,
+        weight: historyByDate.has(dateStr) ? fromKg(historyByDate.get(dateStr) as number, weightUnit) : null,
       };
     });
   })();
   const hasChartData = chartData.some((point) => point.weight !== null);
 
-  const current = parseFloat(goalFormData.currentWeight);
-  const target = parseFloat(goalFormData.targetWeight);
-  const targetDiff = profile?.targetWeight && displayWeight
+  const current = toKg(parseFloat(goalFormData.currentWeight), weightUnit);
+  const target = toKg(parseFloat(goalFormData.targetWeight), weightUnit);
+  const targetDiffKg = profile?.targetWeight && displayWeight
     ? displayWeight.weight - profile.targetWeight
     : null;
+  const targetDiff = targetDiffKg !== null ? fromKg(targetDiffKg, weightUnit) : null;
   const estimatedWeeks = !isNaN(current) && !isNaN(target) && current > target
     ? Math.ceil((current - target) / 0.5)
     : null;
 
   const weightChange = historyData.length >= 2
-    ? (historyData[historyData.length - 1].weight - historyData[0].weight).toFixed(1)
+    ? formatWeightNumber(fromKg(historyData[historyData.length - 1].weight - historyData[0].weight, weightUnit))
     : null;
 
   if (isLoading) {
@@ -323,7 +375,21 @@ export default function WeightPage() {
 
       <RecordPrincipleNotice />
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex rounded-lg border border-zinc-200 bg-white p-1">
+          {(["kg", "jin"] as WeightUnit[]).map((unit) => (
+            <Button
+              key={unit}
+              type="button"
+              variant={weightUnit === unit ? "default" : "ghost"}
+              size="sm"
+              className="h-8 px-3"
+              onClick={() => handleWeightUnitChange(unit)}
+            >
+              {weightUnitLabels[unit]}
+            </Button>
+          ))}
+        </div>
         <button
           onClick={() => setShowHint(!showHint)}
           className="text-sm text-zinc-400 hover:text-zinc-600"
@@ -350,7 +416,7 @@ export default function WeightPage() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Scale className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
-                  <span className="text-lg font-bold sm:text-2xl">{displayWeight.weight} kg</span>
+                  <span className="text-lg font-bold sm:text-2xl">{displayWeightValue(displayWeight.weight)} {unitLabel}</span>
                 </div>
                 <div className="text-xs text-zinc-500">
                   {displayWeight.source === "today"
@@ -372,7 +438,7 @@ export default function WeightPage() {
             <div className="flex items-center gap-2">
               <Scale className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
               <span className="text-lg font-bold sm:text-2xl">
-                {profile?.currentWeight ? `${profile.currentWeight} kg` : "--"}
+                {profile?.currentWeight ? `${displayWeightValue(profile.currentWeight)} ${unitLabel}` : "--"}
               </span>
             </div>
           </CardContent>
@@ -386,7 +452,7 @@ export default function WeightPage() {
             <div className="flex items-center gap-2">
               <Target className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
               <span className="text-lg font-bold sm:text-2xl">
-                {profile?.targetWeight ? `${profile.targetWeight} kg` : "--"}
+                {profile?.targetWeight ? `${displayWeightValue(profile.targetWeight)} ${unitLabel}` : "--"}
               </span>
             </div>
           </CardContent>
@@ -406,7 +472,7 @@ export default function WeightPage() {
                 <Minus className="h-4 w-4 shrink-0 text-zinc-400 sm:h-5 sm:w-5" />
               )}
               <span className="text-lg font-bold sm:text-2xl">
-                {targetDiff !== null ? `${targetDiff.toFixed(1)} kg` : "--"}
+                {targetDiff !== null ? `${formatWeightNumber(targetDiff)} ${unitLabel}` : "--"}
               </span>
             </div>
           </CardContent>
@@ -438,7 +504,7 @@ export default function WeightPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="currentWeight">初始体重 (kg)</Label>
+                  <Label htmlFor="currentWeight">初始体重 ({unitLabel})</Label>
                   <Input
                     id="currentWeight"
                     type="number"
@@ -453,7 +519,7 @@ export default function WeightPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="targetWeight">目标体重 (kg)</Label>
+                  <Label htmlFor="targetWeight">目标体重 ({unitLabel})</Label>
                   <Input
                     id="targetWeight"
                     type="number"
@@ -491,12 +557,12 @@ export default function WeightPage() {
                   <div>
                     <div className="text-zinc-500">平均每周减重</div>
                     <div className="font-medium">
-                      {((current - target) / estimatedWeeks).toFixed(1)} kg
+                      {formatWeightNumber(fromKg((current - target) / estimatedWeeks, weightUnit))} {unitLabel}
                     </div>
                   </div>
                   <div>
                     <div className="text-zinc-500">累计需要减</div>
-                    <div className="font-medium">{(current - target).toFixed(1)} kg</div>
+                    <div className="font-medium">{formatWeightNumber(fromKg(current - target, weightUnit))} {unitLabel}</div>
                   </div>
                 </div>
               )}
@@ -524,7 +590,7 @@ export default function WeightPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="weight">体重 (kg)</Label>
+                <Label htmlFor="weight">体重 ({unitLabel})</Label>
                 <Input
                   id="weight"
                   type="number"
@@ -590,7 +656,7 @@ export default function WeightPage() {
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <Scale className="h-4 w-4 text-zinc-400" />
-                    <span className="font-medium">{record.weight} kg</span>
+                    <span className="font-medium">{displayWeightValue(record.weight)} {unitLabel}</span>
                     {record.isMorning && (
                       <span className="text-xs bg-zinc-200 px-2 py-0.5 rounded">
                         晨重
@@ -624,7 +690,7 @@ export default function WeightPage() {
           <div>
             <CardTitle>体重趋势</CardTitle>
             <CardDescription>
-              {weightChange ? `${viewDays} 天变化 ${weightChange} kg` : "体重变化趋势"}
+              {weightChange ? `${viewDays} 天变化 ${weightChange} ${unitLabel}` : "体重变化趋势"}
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -661,6 +727,7 @@ export default function WeightPage() {
                     stroke="#71717a"
                   />
                   <Tooltip
+                    formatter={(value) => [`${formatWeightNumber(Number(value))} ${unitLabel}`, "体重"]}
                     contentStyle={{
                       backgroundColor: "#fff",
                       border: "1px solid #e4e4e7",
@@ -696,7 +763,7 @@ export default function WeightPage() {
           </DialogHeader>
           {recordToDelete && (
             <div className="rounded-lg bg-zinc-50 p-3 text-sm text-zinc-600">
-              {recordToDelete.weight} kg{recordToDelete.isMorning ? "，晨起体重" : ""}
+              {displayWeightValue(recordToDelete.weight)} {unitLabel}{recordToDelete.isMorning ? "，晨起体重" : ""}
             </div>
           )}
           <DialogFooter>

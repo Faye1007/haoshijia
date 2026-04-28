@@ -44,6 +44,11 @@ export interface WeeklyReview {
   triggerCount: number;
   emotionCorrelation: { emotion: string; avgHunger: number; count: number }[];
   triggerRanking: { reason: string; count: number }[];
+  foodPreference: {
+    foods: { name: string; count: number }[];
+    methods: { name: string; count: number }[];
+    note: string;
+  };
   goodThings: string[];
   strategies: string[];
 }
@@ -69,6 +74,110 @@ const emotionLabels: Record<string, string> = {
 };
 
 const triggerReasonsList = ["craving", "stress", "boredom", "habit", "social", "timeConflict"];
+
+const foodKeywords = [
+  "鸡胸肉",
+  "鸡肉",
+  "牛肉",
+  "猪肉",
+  "鱼",
+  "虾",
+  "鸡蛋",
+  "豆腐",
+  "牛奶",
+  "酸奶",
+  "米饭",
+  "糙米",
+  "燕麦",
+  "玉米",
+  "红薯",
+  "土豆",
+  "面包",
+  "面条",
+  "意面",
+  "番茄",
+  "黄瓜",
+  "生菜",
+  "西兰花",
+  "菠菜",
+  "蘑菇",
+  "胡萝卜",
+  "白菜",
+  "苹果",
+  "香蕉",
+  "蓝莓",
+  "橙子",
+  "坚果",
+];
+
+const cookingMethodKeywords: { keyword: string; label: string }[] = [
+  { keyword: "空气炸", label: "空气炸" },
+  { keyword: "微波", label: "微波加热" },
+  { keyword: "水煮", label: "水煮" },
+  { keyword: "凉拌", label: "凉拌" },
+  { keyword: "清炒", label: "炒制" },
+  { keyword: "炒", label: "炒制" },
+  { keyword: "蒸", label: "蒸煮" },
+  { keyword: "煮", label: "蒸煮" },
+  { keyword: "煎", label: "煎制" },
+  { keyword: "烤", label: "烤制" },
+  { keyword: "炖", label: "炖煮" },
+  { keyword: "焖", label: "焖煮" },
+  { keyword: "卤", label: "卤制" },
+  { keyword: "拌", label: "凉拌" },
+];
+
+const countEntries = (counter: Record<string, number>) => {
+  return Object.entries(counter)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-CN"));
+};
+
+const generateFoodPreference = (records: FoodReviewRecord[]): WeeklyReview["foodPreference"] => {
+  const foodCounter: Record<string, number> = {};
+  const methodCounter: Record<string, number> = {};
+
+  records.forEach((record) => {
+    const description = record.foodDescription.trim();
+    if (!description) return;
+
+    foodKeywords.forEach((keyword) => {
+      if (description.includes(keyword)) {
+        foodCounter[keyword] = (foodCounter[keyword] || 0) + 1;
+      }
+    });
+
+    const matchedMethods = new Set<string>();
+    cookingMethodKeywords.forEach(({ keyword, label }) => {
+      if (description.includes(keyword)) {
+        matchedMethods.add(label);
+      }
+    });
+    matchedMethods.forEach((label) => {
+      methodCounter[label] = (methodCounter[label] || 0) + 1;
+    });
+  });
+
+  const foods = countEntries(foodCounter).slice(0, 5);
+  const methods = countEntries(methodCounter).slice(0, 3);
+  const foodText = foods.map((item) => item.name).join("、");
+  const methodText = methods.map((item) => item.name).join("、");
+
+  let note = "本周饮食记录还不够集中，暂时看不出稳定偏好。继续记录后，系统会更容易识别常吃食物和做法。";
+  if (foods.length > 0 && methods.length > 0) {
+    note = `本周较常出现 ${foodText}，做法偏向 ${methodText}。生成菜谱时可优先保留这些熟悉搭配，再逐步调整份量和搭配。`;
+  } else if (foods.length > 0) {
+    note = `本周较常出现 ${foodText}。生成菜谱时可优先围绕这些食材安排，降低执行成本。`;
+  } else if (methods.length > 0) {
+    note = `本周做法偏向 ${methodText}。生成菜谱时可优先选择类似做法，让计划更容易执行。`;
+  }
+
+  return {
+    foods,
+    methods,
+    note,
+  };
+};
 
 export const getTriggerLabel = (value: string) => {
   return triggerLabels[value] || value;
@@ -188,6 +297,8 @@ export const generateWeeklyReview = (weeklyData: WeeklyReviewData): WeeklyReview
     .map(([reason, count]) => ({ reason, count }))
     .sort((a, b) => b.count - a.count);
 
+  const foodPreference = generateFoodPreference(foodData);
+
   const goodThings: string[] = [];
   if (weightChange < 0) goodThings.push("体重有所下降");
   if (executionPercent >= 60) goodThings.push("三餐规律性改善");
@@ -220,6 +331,7 @@ export const generateWeeklyReview = (weeklyData: WeeklyReviewData): WeeklyReview
     triggerCount,
     emotionCorrelation: emotionCorrelation.slice(0, 3),
     triggerRanking: triggerRanking.slice(0, 3),
+    foodPreference,
     goodThings: goodThings.length > 0 ? goodThings : ["保持良好饮食习惯"],
     strategies: strategies.slice(0, 3),
   };
