@@ -46,6 +46,8 @@ haoshijia/
 │       └── utils.ts                 # cn() 等通用工具
 ├── memory-bank/                     # 产品、架构、进度和修改计划
 ├── components.json                  # shadcn/ui 配置
+├── firebase.json                    # Firebase CLI 配置，指向 Firestore 规则文件
+├── firestore.rules                  # Cloud Firestore 安全规则
 ├── package.json
 ├── postcss.config.mjs
 ├── next.config.ts
@@ -111,6 +113,13 @@ haoshijia/
 - `db`
 
 当前项目未使用 Next.js API Routes 或 Firebase Admin SDK；数据访问主要由浏览器端 Firebase SDK 完成。
+
+### Firestore 安全规则
+
+- Firestore 安全规则维护在 `firestore.rules`，并由 `firebase.json` 声明规则文件路径。
+- 规则默认拒绝所有未明确匹配的读写请求。
+- `users/{userId}`、`records/{userId}`、`plans/{userId}`、`ingredients/{userId}` 和 `reviews/{userId}` 及其子文档只允许已登录用户访问自己的 `request.auth.uid` 对应数据。
+- 当前规则重点解决测试模式开放风险与用户数据隔离，不做字段级 schema 校验。
 
 ### `src/lib/auth.ts`
 

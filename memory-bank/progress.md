@@ -1,5 +1,29 @@
 # 进度记录
 
+## Step 52: Firestore 安全规则上线 ✅ (完成日期: 2026-05-13)
+
+### 完成内容
+- 新增 `firestore.rules`，将 Firestore 从测试模式开放规则调整为按 Firebase Auth 用户隔离的安全规则。
+- 新增 `firebase.json`，声明 Firestore 规则文件位置，便于后续通过 Firebase CLI 管理规则。
+- 规则要求用户必须登录，并且只能读写自己 `uid` 对应的 `users`、`records`、`plans`、`ingredients` 和 `reviews` 数据。
+- 默认拒绝未明确匹配的 Firestore 读写请求。
+- 本次不修改 Firestore 数据结构，不做字段级 schema 校验，不引入 Firebase Admin SDK。
+
+### 验证结果
+- `npm run lint` 通过 ✅
+- `npm run build` 通过 ✅
+- Firebase 控制台规则已发布 ✅
+- 线上网站登录、读取和写入测试通过 ✅
+- 用户验收通过 ✅
+
+### Git 提交
+- 待提交。
+
+### 后续步骤
+- 后续如引入公共数据、管理员后台或服务端写入，需要同步扩展 Firestore 安全规则并补充规则测试。
+
+---
+
 ## Step 51: 体重单位切换与周复盘饮食偏好输出 ✅ (完成日期: 2026-04-28)
 
 ### 完成内容
