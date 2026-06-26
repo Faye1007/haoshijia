@@ -1,16 +1,10 @@
 # 好食家
 
+> **归档说明**：本项目已停止维护，作为个人项目备份保留在 GitHub 上。线上版本仍可访问，但登录和数据写入功能已不可用。
+
 好食家是一个个人减脂记录与复盘网页应用，用来记录体重、围度、饮食、运动和食材库存，并基于日常记录生成复盘与一周菜谱建议。
 
 这个项目来自我的个人使用需求：减脂过程中，仅记录数据并不足够，真正有价值的是从记录中发现行为模式，并把复盘结果转化为下一步可以执行的调整。
-
-## 在线体验
-
-- 线上地址：[好食家](https://haoshijia-iota.vercel.app/)
-
-访问线上版本后，可以注册测试账号体验主要功能。
-
-> 如果线上版本正在部署或 Firebase 配置调整中，可能需要稍后刷新重试。
 
 ## 核心功能
 
@@ -83,7 +77,20 @@ npm run dev
 http://localhost:3000
 ```
 
-项目依赖 Firebase。若要完整运行登录、注册和数据读写功能，需要配置 Firebase 项目，并在 `src/lib/firebase.ts` 中使用对应的客户端配置。
+项目依赖 Firebase。若要完整运行登录、注册和数据读写功能，需要：
+
+1. 创建 Firebase 项目
+2. 复制 `.env.example` 为 `.env.local`
+3. 在 `.env.local` 中填写 Firebase 配置：
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=你的Firebase API密钥
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=你的Firebase Auth域名
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=你的Firebase项目ID
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=你的Firebase存储桶
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=你的Firebase消息发送者ID
+NEXT_PUBLIC_FIREBASE_APP_ID=你的Firebase应用ID
+```
 
 ## 项目状态
 
